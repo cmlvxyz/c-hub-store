@@ -1,6 +1,6 @@
 import React from 'react';
 import { useStore } from '../context/StoreContext';
-import { Package, Clock, CheckCircle2, ShoppingBag, ArrowRight } from 'lucide-react';
+import { Package, Clock, ShoppingBag, ArrowRight } from 'lucide-react';
 import { ProductVisual } from './ProductVisual';
 
 export const OrdersPage: React.FC = () => {
@@ -22,7 +22,7 @@ export const OrdersPage: React.FC = () => {
         </div>
         <button
           onClick={() => setPage('shop')}
-          className="px-8 py-3.5 bg-stone-900 hover:bg-stone-800 text-white dark:bg-amber-400 dark:text-stone-950 font-bold text-xs uppercase tracking-wider rounded-full transition-all shadow-xl hover:scale-105"
+          className="px-8 py-3.5 bg-stone-900 hover:bg-stone-800 text-white dark:bg-indigo-500 dark:hover:bg-indigo-600 dark:text-white font-bold text-xs uppercase tracking-wider rounded-full transition-all shadow-xl hover:scale-105"
         >
           Explore Shop
         </button>
@@ -36,7 +36,7 @@ export const OrdersPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-stone-200 dark:border-stone-800">
         <div>
-          <span className="text-xs uppercase font-extrabold tracking-[0.25em] text-amber-600">
+          <span className="text-xs uppercase font-extrabold tracking-[0.25em] text-indigo-600 dark:text-indigo-400">
             Account History
           </span>
           <h1 className="text-3xl sm:text-4xl font-black font-serif text-stone-900 dark:text-white">
@@ -45,7 +45,7 @@ export const OrdersPage: React.FC = () => {
         </div>
         <button
           onClick={() => setPage('shop')}
-          className="px-5 py-2.5 bg-stone-900 text-white dark:bg-stone-800 dark:text-white hover:bg-amber-400 hover:text-stone-950 rounded-full text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 self-start sm:self-auto"
+          className="px-5 py-2.5 bg-stone-900 text-white dark:bg-indigo-500 dark:text-white hover:bg-indigo-600 rounded-full text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 self-start sm:self-auto"
         >
           <span>Shop More</span>
           <ArrowRight className="w-3.5 h-3.5" />
@@ -63,12 +63,12 @@ export const OrdersPage: React.FC = () => {
             <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-stone-100 dark:border-stone-800">
               <div className="space-y-1">
                 <p className="text-xs text-stone-500 font-medium">Order Number</p>
-                <p className="text-lg font-black font-mono text-stone-900 dark:text-amber-400">{order.orderId}</p>
+                <p className="text-lg font-black font-mono text-stone-900 dark:text-indigo-400">{order.orderId}</p>
               </div>
 
               <div className="flex items-center gap-4 text-xs">
                 <span className="text-stone-500">{order.date}</span>
-                <span className="px-3 py-1 rounded-full font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 flex items-center gap-1.5">
+                <span className="px-3 py-1 rounded-full font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 flex items-center gap-1.5">
                   <Clock className="w-3 h-3" />
                   {order.status}
                 </span>
@@ -114,7 +114,7 @@ export const OrdersPage: React.FC = () => {
                 {order.discount > 0 && (
                   <p className="text-emerald-600 font-bold">Discount: -₱{order.discount.toLocaleString()}</p>
                 )}
-                <p className="text-base font-black text-stone-900 dark:text-amber-400 font-serif">
+                <p className="text-base font-black text-stone-900 dark:text-indigo-400 font-serif">
                   Total Paid: ₱{order.total.toLocaleString()}
                 </p>
               </div>

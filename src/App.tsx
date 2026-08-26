@@ -67,7 +67,7 @@ const MainLayout: React.FC = () => {
     <div
       className="min-h-screen flex flex-col justify-between"
       style={{
-        ...(containerBgStyle || { backgroundColor: '#f5f5f5' }),
+        ...(containerBgStyle || { backgroundColor: 'white' }),
         transition: 'background-color 0.65s cubic-bezier(0.4, 0, 0.2, 1), color 0.5s ease'
       }}
     >

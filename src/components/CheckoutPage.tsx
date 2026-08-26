@@ -84,6 +84,7 @@ export const CheckoutPage: React.FC = () => {
       if (order) {
         setCompletedOrder(order);
         showToast(`Order ${order.orderId} placed successfully!`, 'success');
+        // ✅ Hindi na nag-c-clear ang cart
       }
     }, 800);
   };
@@ -105,7 +106,7 @@ export const CheckoutPage: React.FC = () => {
               Thank You for Your Order!
             </h2>
             <p className="text-xs text-stone-500">
-              Order Ref: <b className="text-stone-900 dark:text-amber-400 font-mono text-sm">{completedOrder.orderId}</b>
+              Order Ref: <b className="text-stone-900 dark:text-indigo-400 font-mono text-sm">{completedOrder.orderId}</b>
             </p>
           </div>
 
@@ -160,7 +161,7 @@ export const CheckoutPage: React.FC = () => {
               <span>Shipping:</span>
               <span>{completedOrder.shipping === 0 ? 'FREE' : `₱${completedOrder.shipping.toLocaleString()}`}</span>
             </div>
-            <div className="flex justify-between text-base font-black text-stone-900 dark:text-amber-400 pt-2 border-t border-stone-200 dark:border-stone-800">
+            <div className="flex justify-between text-base font-black text-stone-900 dark:text-indigo-500 pt-2 border-t border-stone-200 dark:border-stone-800">
               <span>Total Paid:</span>
               <span>₱{completedOrder.total.toLocaleString()}</span>
             </div>
@@ -170,7 +171,7 @@ export const CheckoutPage: React.FC = () => {
           <div className="pt-4 flex flex-col sm:flex-row gap-3">
             <button
               onClick={() => setPage('orders')}
-              className="flex-1 py-3 bg-stone-900 hover:bg-stone-800 text-white dark:bg-amber-400 dark:text-stone-950 font-bold text-xs uppercase tracking-wider rounded-xl transition-all text-center"
+              className="flex-1 py-3 bg-stone-900 hover:bg-stone-800 text-white dark:bg-indigo-500 dark:hover:bg-indigo-600 dark:text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all text-center"
             >
               View in My Orders
             </button>
@@ -232,7 +233,7 @@ export const CheckoutPage: React.FC = () => {
           {/* Customer Details Box */}
           <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm space-y-5">
             <h2 className="text-lg font-bold font-serif text-stone-900 dark:text-white flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-stone-900 text-white dark:bg-amber-400 dark:text-stone-950 text-xs font-bold flex items-center justify-center">1</span>
+              <span className="w-6 h-6 rounded-full bg-stone-900 text-white dark:bg-indigo-500 dark:text-white text-xs font-bold flex items-center justify-center">1</span>
               Delivery Information
             </h2>
 
@@ -247,7 +248,7 @@ export const CheckoutPage: React.FC = () => {
                   placeholder="e.g. Juan Dela Cruz"
                   value={customer.name}
                   onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 text-stone-900 dark:text-white"
+                  className="w-full px-4 py-3 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-stone-900 dark:text-white"
                 />
               </div>
 
@@ -261,7 +262,7 @@ export const CheckoutPage: React.FC = () => {
                   placeholder="juan@example.com"
                   value={customer.email}
                   onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 text-stone-900 dark:text-white"
+                  className="w-full px-4 py-3 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-stone-900 dark:text-white"
                 />
               </div>
 
@@ -275,7 +276,7 @@ export const CheckoutPage: React.FC = () => {
                   placeholder="0917 123 4567"
                   value={customer.phone}
                   onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 text-stone-900 dark:text-white"
+                  className="w-full px-4 py-3 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-stone-900 dark:text-white"
                 />
               </div>
 
@@ -289,7 +290,7 @@ export const CheckoutPage: React.FC = () => {
                   placeholder="House/Unit No., Street, Barangay, City, Province, Postal Code"
                   value={customer.address}
                   onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 text-stone-900 dark:text-white"
+                  className="w-full px-4 py-3 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-stone-900 dark:text-white"
                 />
               </div>
             </div>
@@ -298,7 +299,7 @@ export const CheckoutPage: React.FC = () => {
           {/* Payment Method Box */}
           <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm space-y-4">
             <h2 className="text-lg font-bold font-serif text-stone-900 dark:text-white flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-stone-900 text-white dark:bg-amber-400 dark:text-stone-950 text-xs font-bold flex items-center justify-center">2</span>
+              <span className="w-6 h-6 rounded-full bg-stone-900 text-white dark:bg-indigo-500 dark:text-white text-xs font-bold flex items-center justify-center">2</span>
               Payment Method
             </h2>
 
@@ -317,7 +318,7 @@ export const CheckoutPage: React.FC = () => {
                     onClick={() => setPaymentMethod(method.id)}
                     className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-start gap-3 ${
                       isSelected
-                        ? 'border-amber-400 bg-amber-50/50 dark:bg-amber-950/20 ring-1 ring-amber-400'
+                        ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20 ring-1 ring-indigo-500'
                         : 'border-stone-200 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-800/40'
                     }`}
                   >
@@ -326,11 +327,11 @@ export const CheckoutPage: React.FC = () => {
                       name="paymentMethod"
                       checked={isSelected}
                       onChange={() => setPaymentMethod(method.id)}
-                      className="mt-1 text-amber-500 focus:ring-amber-400"
+                      className="mt-1 text-indigo-500 focus:ring-indigo-500"
                     />
                     <div>
                       <p className="text-xs font-bold text-stone-900 dark:text-white flex items-center gap-1.5">
-                        <Icon className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                        <Icon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                         {method.label}
                       </p>
                       <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">{method.desc}</p>
@@ -344,7 +345,7 @@ export const CheckoutPage: React.FC = () => {
           <button
             type="submit"
             disabled={isProcessing}
-            className="w-full py-4 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-stone-950 font-black text-base uppercase tracking-wider rounded-2xl transition-all shadow-xl shadow-amber-400/20 flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95"
+            className="w-full py-4 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white font-black text-base uppercase tracking-wider rounded-2xl transition-all shadow-xl shadow-indigo-500/20 flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95"
           >
             {isProcessing ? 'Processing Transaction...' : `Place Order • ₱${total.toLocaleString()}`}
           </button>
@@ -398,7 +399,7 @@ export const CheckoutPage: React.FC = () => {
                     value={discountCode}
                     onChange={(e) => setDiscountCode(e.target.value)}
                     disabled={!!appliedCode}
-                    className="flex-1 px-3.5 py-2 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-xs uppercase focus:outline-none focus:ring-2 focus:ring-amber-400 text-stone-900 dark:text-white"
+                    className="flex-1 px-3.5 py-2 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-xs uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500 text-stone-900 dark:text-white"
                   />
                   {appliedCode ? (
                     <button
@@ -411,7 +412,7 @@ export const CheckoutPage: React.FC = () => {
                   ) : (
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white dark:bg-amber-400 dark:text-stone-950 rounded-xl text-xs font-bold transition-all shadow"
+                      className="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white dark:bg-indigo-500 dark:hover:bg-indigo-600 dark:text-white rounded-xl text-xs font-bold transition-all shadow"
                     >
                       Apply
                     </button>
@@ -451,7 +452,7 @@ export const CheckoutPage: React.FC = () => {
 
               <div className="pt-3 border-t border-stone-200 dark:border-stone-800 flex justify-between items-baseline">
                 <span className="text-base font-extrabold text-stone-900 dark:text-white">Total Amount</span>
-                <span className="text-2xl font-black font-serif text-amber-500">
+                <span className="text-2xl font-black font-serif text-indigo-500">
                   ₱{total.toLocaleString()}
                 </span>
               </div>

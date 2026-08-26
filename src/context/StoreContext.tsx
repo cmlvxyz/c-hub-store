@@ -226,6 +226,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     showToast('Cart cleared', 'info');
   };
 
+  // StoreContext.tsx - I-update ang createOrder function
+
   const createOrder = (
     customer: CustomerDetails,
     discountCode: string,
@@ -266,7 +268,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     setOrders(prev => [newOrder, ...prev]);
-    setCart([]);
+    
+    // ✅ HUWAG I-CLEAR ANG CART PARA PEDE MAG-ORDER ULIT
+    // setCart([]); // REMOVED
+    
     return newOrder;
   };
 
