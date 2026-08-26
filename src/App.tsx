@@ -13,18 +13,18 @@ import { LoginPage } from './components/LoginPage';
 import { FAQPage, ShippingPage, ReturnsPage, SizeGuidePage, ContactPage } from './components/SupportPages';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 
+// ✅ WALANG AdminDashboard import dito
+
 const MainLayout: React.FC = () => {
   const { page, activeBgColor, isDarkTheme, toast, user } = useStore();
 
   const isProductShowcase = ['clothes', 'shoes', 'pants', 'underwear', 'accessories'].includes(page);
 
-  // Background color dynamically switches based on current active product color swatch
   const containerBgStyle = isProductShowcase
     ? { backgroundColor: activeBgColor }
     : undefined;
 
   const renderActivePage = () => {
-    // If not logged in and attempting to access Cart, Checkout, or Orders, redirect to Login
     if (!user.isLoggedIn && ['cart', 'checkout', 'orders'].includes(page)) {
       return <LoginPage />;
     }
@@ -58,6 +58,7 @@ const MainLayout: React.FC = () => {
         return <SizeGuidePage />;
       case 'contact':
         return <ContactPage />;
+      // ✅ WALANG 'admin' case
       default:
         return <HomePage />;
     }
@@ -73,7 +74,6 @@ const MainLayout: React.FC = () => {
     >
       <SplashScreen />
 
-      {/* Floating Toast Alerts */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 animate-bounce">
           <div className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-stone-900 text-white shadow-2xl border border-stone-700 text-xs font-bold">
@@ -85,7 +85,6 @@ const MainLayout: React.FC = () => {
         </div>
       )}
 
-      {/* Main App Container */}
       <div className="flex flex-col flex-1">
         <Header />
         <main className="flex-1 w-full">

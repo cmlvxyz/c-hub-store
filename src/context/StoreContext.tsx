@@ -34,11 +34,12 @@ interface StoreContextType {
   updateCartQty: (id: string, size: string | undefined, delta: number) => void;
   removeFromCart: (id: string, size?: string) => void;
   clearCart: () => void;
-  createOrder: (customer: CustomerDetails, discountCode: string, paymentMethod: string) => Order | null;
+  createOrder: (customer: CustomerDetails, discountCode: string, paymentMethod: string) => Promise<Order | null>;
   login: (username: string) => void;
   logout: () => void;
   showToast: (message: string, type?: 'info' | 'success' | 'warning') => void;
   closeSplash: () => void;
+  updateOrderStatus: (orderId: string, newStatus: string) => void;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -102,6 +103,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     try {
       localStorage.setItem('chub_orders', JSON.stringify(orders));
+      localStorage.setItem('chub_admin_orders', JSON.stringify(orders));
     } catch (e) {
       console.error('Failed to sync orders to localStorage', e);
     }
@@ -115,6 +117,44 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.error('Failed to sync user to localStorage', e);
     }
   }, [user]);
+
+  // ✅ Listen for BroadcastChannel messages from Admin
+  useEffect(() => {
+    console.log('📡 Store: Setting up BroadcastChannel listener...');
+    
+    try {
+      const channel = new BroadcastChannel('chub_orders_channel');
+      channel.onmessage = (event) => {
+        console.log('📦 Store received broadcast:', event.data);
+        if (event.data.type === 'UPDATE_ORDER' || event.data.type === 'NEW_ORDER') {
+          // ✅ I-update ang orders
+          setOrders(event.data.orders);
+          localStorage.setItem('chub_orders', JSON.stringify(event.data.orders));
+          localStorage.setItem('chub_admin_orders', JSON.stringify(event.data.orders));
+          showToast('Orders updated!', 'success');
+        }
+      };
+      return () => {
+        channel.close();
+      };
+    } catch (e) {
+      console.log('BroadcastChannel not supported');
+    }
+
+    // ✅ Listen for storage changes from other tabs
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'chub_orders' || e.key === 'chub_admin_orders') {
+        const saved = localStorage.getItem('chub_orders');
+        if (saved) {
+          setOrders(JSON.parse(saved));
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   // Compute Active Product Background Color & Text Color
   const currentCategoryConfig = PRODUCTS_CONFIG[page]?.[gender];
@@ -147,14 +187,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (newSubCategory) {
       setSubCategoryState(newSubCategory);
     } else {
-      // Pick default subCategory for that category & gender
       const catConfig = PRODUCTS_CONFIG[newPage]?.[newGender || gender];
       if (catConfig?.defaultSubCategory) {
         setSubCategoryState(catConfig.defaultSubCategory);
       }
     }
 
-    // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -226,14 +264,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     showToast('Cart cleared', 'info');
   };
 
-  // StoreContext.tsx - I-update ang createOrder function
-
-  const createOrder = (
+  // ✅ CREATE ORDER - Save to Backend API
+  const createOrder = async (
     customer: CustomerDetails,
     discountCode: string,
     paymentMethod: string
-  ): Order | null => {
-    if (cart.length === 0) return null;
+  ): Promise<Order | null> => {
+    console.log('🛒 Creating order...');
+    console.log('Cart:', cart);
+    console.log('Customer:', customer);
+    
+    if (cart.length === 0) {
+      showToast('Cart is empty!', 'warning');
+      return null;
+    }
 
     const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
     const shipping = subtotal > 2500 ? 0 : 150;
@@ -267,12 +311,97 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       status: 'Pending'
     };
 
-    setOrders(prev => [newOrder, ...prev]);
+    console.log('📦 New order:', newOrder);
+
+    try {
+      console.log('📡 Sending to backend...');
+      const response = await fetch('http://localhost:3013/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newOrder)
+      });
+      
+      console.log('📡 Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Server error:', errorText);
+        throw new Error(`Server error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('✅ Order saved:', data);
+      
+      setOrders(data.orders);
+      localStorage.setItem('chub_orders', JSON.stringify(data.orders));
+      localStorage.setItem('chub_admin_orders', JSON.stringify(data.orders));
+      
+      // ✅ Broadcast sa Admin
+      try {
+        const channel = new BroadcastChannel('chub_orders_channel');
+        channel.postMessage({ 
+          type: 'NEW_ORDER', 
+          orders: data.orders 
+        });
+        channel.close();
+        console.log('✅ Order broadcasted to admin dashboard');
+      } catch (e) {
+        console.log('BroadcastChannel not supported');
+      }
+      
+      setCart([]);
+      localStorage.setItem('chub_cart', JSON.stringify([]));
+      
+      showToast(`Order ${newOrder.orderId} placed successfully!`, 'success');
+      return newOrder;
+      
+    } catch (error) {
+      console.error('❌ Failed to save order:', error);
+      showToast('Failed to place order. Please try again.', 'error');
+      return null;
+    }
+  };
+
+  // ✅ UPDATE ORDER STATUS - Save to Backend API
+  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    console.log(`🔄 Updating order ${orderId} to ${newStatus}...`);
     
-    // ✅ HUWAG I-CLEAR ANG CART PARA PEDE MAG-ORDER ULIT
-    // setCart([]); // REMOVED
-    
-    return newOrder;
+    try {
+      const response = await fetch(`http://localhost:3013/api/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update order');
+      }
+      
+      const data = await response.json();
+      console.log('✅ Order updated:', data);
+      
+      setOrders(data.orders);
+      localStorage.setItem('chub_orders', JSON.stringify(data.orders));
+      localStorage.setItem('chub_admin_orders', JSON.stringify(data.orders));
+      
+      // ✅ Broadcast sa Admin
+      try {
+        const channel = new BroadcastChannel('chub_orders_channel');
+        channel.postMessage({ 
+          type: 'UPDATE_ORDER', 
+          orders: data.orders 
+        });
+        channel.close();
+        console.log('📡 Broadcast sent to admin');
+      } catch (e) {
+        console.log('BroadcastChannel not supported');
+      }
+      
+      showToast(`Order ${orderId} updated to ${newStatus}`, 'success');
+    } catch (error) {
+      console.error('❌ Failed to update order:', error);
+      showToast('Failed to update order. Please try again.', 'error');
+    }
   };
 
   const login = (username: string) => {
@@ -320,7 +449,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         login,
         logout,
         showToast,
-        closeSplash
+        closeSplash,
+        updateOrderStatus,
       }}
     >
       {children}
