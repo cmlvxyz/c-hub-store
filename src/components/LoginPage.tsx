@@ -150,17 +150,6 @@ export const LoginPage: React.FC = () => {
             <span>Sign In</span>
             <ArrowRight className="w-4 h-4" />
           </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              login('Admin');
-              setPage('shop');
-            }}
-            className="w-full py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-800 dark:bg-stone-800 dark:hover:bg-stone-700 dark:text-stone-200 font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 border border-stone-200 dark:border-stone-700"
-          >
-            <span>Quick Login as Admin</span>
-          </button>
         </form>
 
         <div className="text-center pt-2">
