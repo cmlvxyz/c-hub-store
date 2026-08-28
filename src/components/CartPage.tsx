@@ -12,7 +12,6 @@ export const CartPage: React.FC = () => {
   const isFreeShipping = subtotal >= freeShippingThreshold;
   const amountToFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
 
-  // Toggle item selection
   const toggleSelectItem = (itemId: string) => {
     setSelectedItems(prev => {
       const newSet = new Set(prev);
@@ -25,7 +24,6 @@ export const CartPage: React.FC = () => {
     });
   };
 
-  // Select all items
   const selectAllItems = () => {
     if (selectedItems.size === cart.length) {
       setSelectedItems(new Set());
@@ -35,21 +33,17 @@ export const CartPage: React.FC = () => {
     }
   };
 
-  // Get selected items
   const getSelectedItems = () => {
     return cart.filter((_, idx) => selectedItems.has(`item-${idx}`));
   };
 
-  // Calculate selected total
   const selectedSubtotal = getSelectedItems().reduce((sum, item) => sum + item.price * item.qty, 0);
   const selectedShipping = selectedSubtotal > freeShippingThreshold ? 0 : 150;
   const selectedTotal = selectedSubtotal + selectedShipping;
 
-  // Handle Place Order - goes to checkout with selected items
   const handlePlaceOrder = () => {
     const selected = getSelectedItems();
     if (selected.length === 0) return;
-    // Store selected items in context or pass to checkout
     setPage('checkout');
   };
 
@@ -144,7 +138,8 @@ export const CartPage: React.FC = () => {
               return (
                 <div
                   key={itemId}
-                  className={`p-4 rounded-2xl border-2 transition-all duration-200 ${
+                  onClick={() => toggleSelectItem(itemId)}
+                  className={`p-4 rounded-2xl border-2 transition-all duration-200 cursor-pointer select-none ${
                     isSelected 
                       ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20' 
                       : 'border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900'
@@ -153,7 +148,7 @@ export const CartPage: React.FC = () => {
                   <div className="flex items-start gap-4">
                     {/* Selection Checkbox */}
                     <button
-                      onClick={() => toggleSelectItem(itemId)}
+                      onClick={(e) => { e.stopPropagation(); toggleSelectItem(itemId); }}
                       className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all shrink-0 mt-2 ${
                         isSelected 
                           ? 'bg-indigo-500 border-indigo-500 text-white' 
@@ -202,7 +197,7 @@ export const CartPage: React.FC = () => {
                     <div className="flex flex-col items-end gap-2">
                       <div className="flex items-center gap-1 bg-stone-100 dark:bg-stone-800 rounded-xl p-1">
                         <button
-                          onClick={() => updateCartQty(item.id, item.size, -1)}
+                          onClick={(e) => { e.stopPropagation(); updateCartQty(item.id, item.size, -1); }}
                           className="w-7 h-7 rounded-lg bg-white dark:bg-stone-700 hover:bg-stone-200 text-stone-800 dark:text-white flex items-center justify-center transition-colors shadow-sm"
                         >
                           <Minus className="w-3.5 h-3.5" />
@@ -211,7 +206,7 @@ export const CartPage: React.FC = () => {
                           {item.qty}
                         </span>
                         <button
-                          onClick={() => updateCartQty(item.id, item.size, 1)}
+                          onClick={(e) => { e.stopPropagation(); updateCartQty(item.id, item.size, 1); }}
                           className="w-7 h-7 rounded-lg bg-white dark:bg-stone-700 hover:bg-stone-200 text-stone-800 dark:text-white flex items-center justify-center transition-colors shadow-sm"
                         >
                           <Plus className="w-3.5 h-3.5" />
@@ -224,7 +219,7 @@ export const CartPage: React.FC = () => {
                         </p>
                       </div>
                       <button
-                        onClick={() => removeFromCart(item.id, item.size)}
+                        onClick={(e) => { e.stopPropagation(); removeFromCart(item.id, item.size); }}
                         className="text-stone-400 hover:text-red-500 transition-colors"
                       >
                         <X className="w-4 h-4" />

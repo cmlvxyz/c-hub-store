@@ -44,7 +44,7 @@ interface StoreContextType {
   refreshOrders: () => Promise<void>;
   clearAllOrders: () => void;
   loadUserOrders: () => void;
-  syncOrdersToServer: () => Promise<void>; // ✅ BAGO
+  syncOrdersToServer: () => Promise<void>; 
   isLoading: boolean;
 }
 
@@ -58,7 +58,6 @@ const getOrdersStorageKey = (username: string) => {
   return `chub_orders_${username.toLowerCase()}`;
 };
 
-// ✅ SERVER SYNC FUNCTION
 const SYNC_URL = 'http://localhost:3013/api/orders/sync';
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -122,7 +121,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const [toast, setToast] = useState<{ message: string; type?: 'info' | 'success' | 'warning' } | null>(null);
 
-  // ✅ SYNC ORDERS TO SERVER - BAGONG FUNCTION
   const syncOrdersToServer = async () => {
     if (!user.isLoggedIn || !user.username) {
       console.log('⚠️ Cannot sync: User not logged in');
@@ -167,7 +165,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const parsed = JSON.parse(saved);
         setOrders(parsed);
         console.log(`📦 Loaded ${parsed.length} orders for ${user.username}`);
-        // ✅ Auto-sync after loading
         setTimeout(() => syncOrdersToServer(), 500);
       } else {
         setOrders([]);
@@ -179,7 +176,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // ✅ Auto-sync tuwing may pagbabago sa orders
   useEffect(() => {
     if (user.isLoggedIn && user.username && orders.length > 0) {
       const timer = setTimeout(() => {
@@ -237,7 +233,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           const parsed = JSON.parse(savedOrders);
           setOrders(parsed);
           console.log(`📦 Loaded orders for ${user.username}:`, parsed.length);
-          // ✅ Auto-sync after loading
           setTimeout(() => syncOrdersToServer(), 500);
         } else {
           setOrders([]);
@@ -261,7 +256,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [user]);
 
-  // ✅ Real-time status updates from admin via SSE - FIXED
   useEffect(() => {
     let es: EventSource | null = null;
     const serverUrl = 'http://localhost:3013';
@@ -283,7 +277,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.warn('⚠️ SSE error:', error);
       };
       
-      // ✅ ORDER UPDATE EVENT - Fixed to trigger re-render
       es.addEventListener('order_update', (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data);
@@ -296,7 +289,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           
           console.log(`📦 Order update received: ${orderId} -> ${status}`);
           
-          // ✅ If order object is provided, use it directly
           if (order) {
             setOrders(prev => {
               const exists = prev.some(o => o.orderId === orderId);
@@ -305,7 +297,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 const key = getOrdersStorageKey(user.username);
                 localStorage.setItem(key, JSON.stringify(newOrders));
                 showToast(`Order ${orderId} is now ${status}`, 'success');
-                // ✅ Sync to server
                 setTimeout(() => syncOrdersToServer(), 500);
                 return newOrders;
               }
@@ -316,14 +307,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               const key = getOrdersStorageKey(user.username);
               localStorage.setItem(key, JSON.stringify(updatedOrders));
               showToast(`Order ${orderId} is now ${status}`, 'success');
-              // ✅ Sync to server
               setTimeout(() => syncOrdersToServer(), 500);
               return updatedOrders;
             });
             return;
           }
           
-          // ✅ If no order object, fetch from backend
           setOrders(prev => {
             const exists = prev.some(o => o.orderId === orderId);
             
@@ -336,7 +325,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                       const newOrders = [fullOrder, ...prevOrders.filter(o => o.orderId !== orderId)];
                       const key = getOrdersStorageKey(user.username);
                       localStorage.setItem(key, JSON.stringify(newOrders));
-                      // ✅ Sync to server
                       setTimeout(() => syncOrdersToServer(), 500);
                       return newOrders;
                     });
@@ -353,7 +341,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             const key = getOrdersStorageKey(user.username);
             localStorage.setItem(key, JSON.stringify(updatedOrders));
             showToast(`Order ${orderId} is now ${status}`, 'success');
-            // ✅ Sync to server
             setTimeout(() => syncOrdersToServer(), 500);
             return updatedOrders;
           });
@@ -362,7 +349,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       });
       
-      // ✅ NEW ORDER EVENT
       es.addEventListener('new_order', (event: MessageEvent) => {
         try {
           const newOrder = JSON.parse(event.data) as Order;
@@ -377,7 +363,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               const key = getOrdersStorageKey(user.username);
               localStorage.setItem(key, JSON.stringify(updated));
               showToast(`Order ${newOrder.orderId} placed!`, 'success');
-              // ✅ Sync to server
               setTimeout(() => syncOrdersToServer(), 500);
               return updated;
             });
@@ -482,7 +467,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         copy[existingIdx].qty += qty;
         return copy;
       } else {
-        return [...prev, { ...item, qty }];
+        // ✅ Siguraduhing may image ang item
+        const imageToUse = item.image || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23e2e8f0"/%3E%3Ctext x="50" y="50" text-anchor="middle" dy=".3em" fill="%2394a3b8" font-size="12"%3EImage%3C/text%3E%3C/svg%3E';
+        return [...prev, { ...item, image: imageToUse, qty }];
       }
     });
     showToast(`Added ${item.name} to cart!`, 'success');
@@ -522,12 +509,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       localStorage.removeItem(key);
       setOrders([]);
       showToast(`All orders for ${user.username} cleared!`, 'info');
-      // ✅ Sync to server
       setTimeout(() => syncOrdersToServer(), 500);
     }
   };
 
-  // ✅ CREATE ORDER
   const createOrder = async (
     customer: CustomerDetails,
     discountCode: string,
@@ -559,6 +544,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const discountAmount = Math.round(subtotal * discountPercent);
     const total = Math.max(0, subtotal - discountAmount + shipping);
 
+    // ✅ Siguraduhing kasama ang image sa bawat item ng order
+    const orderItems = cart.map(item => ({
+      ...item,
+      image: item.image || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23e2e8f0"/%3E%3Ctext x="50" y="50" text-anchor="middle" dy=".3em" fill="%2394a3b8" font-size="12"%3EImage%3C/text%3E%3C/svg%3E'
+    }));
+
     const newOrder: Order = {
       orderId: 'CHUB-' + Math.floor(100000 + Math.random() * 900000),
       date: new Date().toLocaleDateString('en-US', {
@@ -567,7 +558,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         day: 'numeric'
       }),
       customer,
-      items: [...cart],
+      items: orderItems,
       subtotal,
       shipping,
       discount: discountAmount,
@@ -607,13 +598,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         });
       }
 
-      setCart([]);
-      if (user.isLoggedIn && user.username) {
-        const cartKey = getCartStorageKey(user.username);
-        localStorage.setItem(cartKey, JSON.stringify([]));
-      }
-
-      // ✅ Sync to server
       setTimeout(() => syncOrdersToServer(), 500);
 
       showToast(`Order ${newOrder.orderId} placed successfully!`, 'success');
@@ -654,7 +638,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           localStorage.setItem(key, JSON.stringify(allOrders));
           return allOrders;
         });
-        // ✅ Sync to server
         setTimeout(() => syncOrdersToServer(), 500);
         showToast(`Orders refreshed! (${userOrders.length} orders)`, 'success');
       } else {
@@ -689,7 +672,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const parsed = JSON.parse(savedOrders);
         setOrders(parsed);
         console.log(`✅ Loaded ${parsed.length} orders for ${formatted}`);
-        // ✅ Sync to server
         setTimeout(() => syncOrdersToServer(), 500);
       } else {
         setOrders([]);
@@ -769,7 +751,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         refreshOrders,
         clearAllOrders,
         loadUserOrders,
-        syncOrdersToServer, // ✅ BAGO
+        syncOrdersToServer,
         isLoading,
       }}
     >

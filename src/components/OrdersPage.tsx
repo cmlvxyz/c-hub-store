@@ -617,9 +617,6 @@ export const OrdersPage: React.FC = () => {
           <h1 className="text-3xl sm:text-4xl font-black font-serif text-stone-900 dark:text-white">
             Your Orders ({displayOrders.length})
           </h1>
-          <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
-            🔄 Auto-updates in real-time
-          </p>
         </div>
         <button
           onClick={() => setPage('shop')}
@@ -653,9 +650,19 @@ export const OrdersPage: React.FC = () => {
                   <p className="text-lg font-black font-mono text-stone-900 dark:text-indigo-400">{order.orderId}</p>
                 </div>
 
-                <div className="flex items-center gap-4 text-xs">
+                {/* ✅ DITO NA MAY DELETE ICON SA TABI NG STATUS */}
+                <div className="flex items-center gap-2 text-xs">
                   <span className="text-stone-500">{order.date}</span>
                   {getStatusBadge(status)}
+                  
+                  {/* Maliit na Delete Icon sa tabi ng status */}
+                  <button
+                    onClick={() => handleDeleteOrder(order.orderId)}
+                    className="p-1.5 rounded-lg text-stone-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                    title="Delete Order"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 
@@ -825,16 +832,7 @@ export const OrdersPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* ✅ DELETE ORDER BUTTON - PARA SA LAHAT NG ORDERS */}
-                  <button
-                    onClick={() => handleDeleteOrder(order.orderId)}
-                    className="w-full py-2.5 bg-red-500 hover:bg-red-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span>Delete Order</span>
-                  </button>
-
-                  {/* REVIEW BUTTON */}
+                  {/* ✅ REVIEW BUTTON */}
                   {(status === 'Delivered' || status === 'To Review' || (status === 'Completed' && !hasReview)) && (
                     <button
                       onClick={() => setReviewingOrder(order)}
