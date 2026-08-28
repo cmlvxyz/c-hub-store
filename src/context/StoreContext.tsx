@@ -257,7 +257,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     let es: EventSource | null = null;
-    const serverUrl = 'http://localhost:3013';
+    const serverUrl = 'https://c-hub-backend-ijy4.onrender.com';
     
     if (!user.isLoggedIn || !user.username) {
       console.log('⏭️ Skipping SSE - user not logged in');
