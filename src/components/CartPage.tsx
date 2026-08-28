@@ -90,19 +90,15 @@ export const CartPage: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {/* ✅ SELECT ALL - May bg indigo at white text */}
           <button
             onClick={selectAllItems}
-            className="text-xs font-medium text-indigo-500 hover:text-indigo-600 transition-colors"
+            className="px-4 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-md shadow-indigo-600/20"
           >
             {selectedItems.size === cart.length ? 'Deselect All' : 'Select All'}
           </button>
-          <button
-            onClick={clearCart}
-            className="text-xs font-bold text-red-500 hover:text-red-700 flex items-center gap-1.5 transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-            Clear Cart
-          </button>
+          
+          {/* ✅ TINANGGAL NA YUNG CLEAR CART DITO */}
         </div>
       </div>
 
