@@ -115,9 +115,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const [ordersUpdated, setOrdersUpdated] = useState<number>(0);
 
-  const [splashShown, setSplashShown] = useState<boolean>(() => {
-    return sessionStorage.getItem('splash_shown') === 'true';
-  });
+  // ✅ ITO ANG TAMANG SETUP PARA LAGING LALABAS ANG SPLASH SA REFRESH
+  const [splashShown, setSplashShown] = useState<boolean>(false);
 
   const [toast, setToast] = useState<{ message: string; type?: 'info' | 'success' | 'warning' } | null>(null);
 
@@ -711,8 +710,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     showToast('Logged out successfully', 'info');
   };
 
+  // ✅ ONLY ONE closeSplash (Walang sessionStorage) para laging lalabas sa refresh
   const closeSplash = () => {
-    sessionStorage.setItem('splash_shown', 'true');
     setSplashShown(true);
   };
 

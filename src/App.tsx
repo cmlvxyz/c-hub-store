@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { StoreProvider, useStore } from './context/StoreContext';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -13,10 +14,17 @@ import { LoginPage } from './components/LoginPage';
 import { FAQPage, ShippingPage, ReturnsPage, SizeGuidePage, ContactPage } from './components/SupportPages';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 
-// ✅ WALANG AdminDashboard import dito
-
 const MainLayout: React.FC = () => {
-  const { page, activeBgColor, isDarkTheme, toast, user } = useStore();
+  const { page, activeBgColor, isDarkTheme, toast, user, splashShown } = useStore();
+  const [hasRenderedAfterSplash, setHasRenderedAfterSplash] = useState(false);
+
+  useEffect(() => {
+    if (splashShown) {
+      setHasRenderedAfterSplash(true);
+    } else {
+      setHasRenderedAfterSplash(false);
+    }
+  }, [splashShown]);
 
   const isProductShowcase = ['clothes', 'shoes', 'pants', 'underwear', 'accessories'].includes(page);
 
@@ -58,7 +66,6 @@ const MainLayout: React.FC = () => {
         return <SizeGuidePage />;
       case 'contact':
         return <ContactPage />;
-      // ✅ WALANG 'admin' case
       default:
         return <HomePage />;
     }
@@ -66,33 +73,69 @@ const MainLayout: React.FC = () => {
 
   return (
     <div
-      className="min-h-screen flex flex-col justify-between"
+      className="min-h-screen flex flex-col justify-between overflow-x-hidden relative"
       style={{
-        ...(containerBgStyle || { backgroundColor: 'white' }),
+        ...(containerBgStyle || { backgroundColor: '#ffffff' }),
         transition: 'background-color 0.65s cubic-bezier(0.4, 0, 0.2, 1), color 0.5s ease'
       }}
     >
+      {/* Enhanced Animated White Splash Screen */}
       <SplashScreen />
 
+      {/* Global Interactive Notification Toast */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 animate-bounce">
-          <div className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-stone-900 text-white shadow-2xl border border-stone-700 text-xs font-bold">
-            {toast.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-            {toast.type === 'warning' && <AlertCircle className="w-4 h-4 text-amber-400" />}
-            {toast.type === 'info' && <Info className="w-4 h-4 text-blue-400" />}
+        <motion.div 
+          initial={{ opacity: 0, y: 30, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 30, scale: 0.9 }}
+          className="fixed bottom-6 right-6 z-50 pointer-events-none"
+        >
+          <div className="flex items-center gap-2.5 px-5 py-3 rounded-2xl bg-stone-900 text-white shadow-2xl border border-stone-700 text-xs font-bold pointer-events-auto">
+            {toast.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />}
+            {toast.type === 'warning' && <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />}
+            {toast.type === 'info' && <Info className="w-4 h-4 text-indigo-400 shrink-0" />}
             <span>{toast.message}</span>
           </div>
-        </div>
+        </motion.div>
       )}
 
-      <div className="flex flex-col flex-1">
-        <Header />
-        <main className="flex-1 w-full">
-          {renderActivePage()}
-        </main>
-      </div>
+      {/* Main Content with Drop-Down Entrance from the Top after Splash Screen finishes */}
+      {splashShown ? (
+        <motion.div
+          key="main-app-content-dropped"
+          initial={{ y: -160, opacity: 0, filter: 'blur(6px)' }}
+          animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
+          transition={{
+            type: 'spring',
+            stiffness: 140,
+            damping: 18,
+            mass: 0.85,
+            duration: 0.9
+          }}
+          className="flex flex-col flex-1 w-full justify-between"
+        >
+          <div className="flex flex-col flex-1">
+            <Header />
+            <main className="flex-1 w-full">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={page}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.25, ease: 'easeOut' }}
+                >
+                  {renderActivePage()}
+                </motion.div>
+              </AnimatePresence>
+            </main>
+          </div>
 
-      <Footer />
+          <Footer />
+        </motion.div>
+      ) : (
+        <div className="opacity-0 pointer-events-none h-screen" />
+      )}
     </div>
   );
 };
