@@ -138,12 +138,12 @@ export const PRODUCTS_CONFIG: Record<string, Record<GenderType, CategoryData>> =
           { name: 'Summer Halter Dress - Midnight Polka', image: '/images/clothes/women/dress/dress6.png', colorName: 'Midnight Polka', bgColor: '#36395F', textColor: '#FFFFFF' }
         ],
         tshirt: [
-          { name: 'Relaxed T-Shirt - Ivory', image: 'white1.png', colorName: 'Ivory', bgColor: '#F0EEE8', textColor: '#1d1a18' },
-          { name: 'Relaxed T-Shirt - Heather Gray', image: 'gray1.png', colorName: 'Heather Gray', bgColor: '#E0DED8', textColor: '#1d1a18' },
-          { name: 'Relaxed T-Shirt - Cobalt Blue', image: 'blue1.png', colorName: 'Cobalt Blue', bgColor: '#3A5A9A', textColor: '#FFFFFF' },
-          { name: 'Relaxed T-Shirt - Espresso Brown', image: 'brown2.png', colorName: 'Espresso Brown', bgColor: '#7A5A3A', textColor: '#FFFFFF' },
-          { name: 'Relaxed T-Shirt - Dusty Pink', image: 'pink1.png', colorName: 'Dusty Pink', bgColor: '#D4A0A8', textColor: '#1d1a18' },
-          { name: 'Relaxed T-Shirt - Warm Beige', image: 'beige1.png', colorName: 'Warm Beige', bgColor: '#D4C4B0', textColor: '#1d1a18' }
+          { name: 'Premium T-Shirt - White', image: '/images/clothes/men/t-shirts/white.png', colorName: 'White', bgColor: '#F5F5F5', textColor: '#1d1a18' },
+          { name: 'Premium T-Shirt - Black', image: '/images/clothes/men/t-shirts/black.png', colorName: 'Black', bgColor: '#4A4A4A', textColor: '#FFFFFF' },
+          { name: 'Premium T-Shirt - Blue', image: '/images/clothes/men/t-shirts/blue.png', colorName: 'Blue', bgColor: '#2A3459', textColor: '#FFFFFF' },
+          { name: 'Premium T-Shirt - Yellow', image: '/images/clothes/men/t-shirts/yellow.png', colorName: 'Yellow', bgColor: '#FFE44D', textColor: '#1d1a18' },
+          { name: 'Premium T-Shirt - Red', image: '/images/clothes/men/t-shirts/red.png', colorName: 'Red', bgColor: '#D44545', textColor: '#FFFFFF' },
+          { name: 'Premium T-Shirt - Green', image: '/images/clothes/men/t-shirts/green.png', colorName: 'Green', bgColor: '#2A8C5E', textColor: '#FFFFFF' }
         ]
       }
     },
@@ -202,12 +202,12 @@ export const PRODUCTS_CONFIG: Record<string, Record<GenderType, CategoryData>> =
           { name: 'Boys Polo Shirt - Gray', image: 'gray1.png', colorName: 'Gray', bgColor: '#8A8A8A', textColor: '#FFFFFF' }
         ],
         tshirt: [
-          { name: 'Boys Graphic Tee - White', image: 'white.png', colorName: 'White', bgColor: '#F5F5F5', textColor: '#1d1a18' },
-          { name: 'Boys Graphic Tee - Blue', image: 'blue.png', colorName: 'Blue', bgColor: '#2A5A8A', textColor: '#FFFFFF' },
-          { name: 'Boys Graphic Tee - Red', image: 'red.png', colorName: 'Red', bgColor: '#C44A4A', textColor: '#FFFFFF' },
-          { name: 'Boys Graphic Tee - Green', image: 'green.png', colorName: 'Green', bgColor: '#3A7A4A', textColor: '#FFFFFF' },
-          { name: 'Boys Graphic Tee - Yellow', image: 'yellow.png', colorName: 'Yellow', bgColor: '#F5D84A', textColor: '#1d1a18' },
-          { name: 'Boys Graphic Tee - Amber', image: 'brown2.png', colorName: 'Amber', bgColor: '#E88A3A', textColor: '#FFFFFF' }
+          { name: 'Premium T-Shirt - White', image: '/images/clothes/men/t-shirts/white.png', colorName: 'White', bgColor: '#F5F5F5', textColor: '#1d1a18' },
+          { name: 'Premium T-Shirt - Black', image: '/images/clothes/men/t-shirts/black.png', colorName: 'Black', bgColor: '#4A4A4A', textColor: '#FFFFFF' },
+          { name: 'Premium T-Shirt - Blue', image: '/images/clothes/men/t-shirts/blue.png', colorName: 'Blue', bgColor: '#2A3459', textColor: '#FFFFFF' },
+          { name: 'Premium T-Shirt - Yellow', image: '/images/clothes/men/t-shirts/yellow.png', colorName: 'Yellow', bgColor: '#FFE44D', textColor: '#1d1a18' },
+          { name: 'Premium T-Shirt - Red', image: '/images/clothes/men/t-shirts/red.png', colorName: 'Red', bgColor: '#D44545', textColor: '#FFFFFF' },
+          { name: 'Premium T-Shirt - Green', image: '/images/clothes/men/t-shirts/green.png', colorName: 'Green', bgColor: '#2A8C5E', textColor: '#FFFFFF' }
         ]
       }
     },
@@ -250,28 +250,28 @@ export const PRODUCTS_CONFIG: Record<string, Record<GenderType, CategoryData>> =
       },
       products: {
         top: [
-          { name: 'Girls Peplum Top - Vanilla', image: 'top1.png', colorName: 'Vanilla', bgColor: '#F8F6F2', textColor: '#1d1a18' },
-          { name: 'Girls Peplum Top - Pastel Pink', image: 'pink.png', colorName: 'Pastel Pink', bgColor: '#F5C8D0', textColor: '#1d1a18' },
-          { name: 'Girls Peplum Top - Lavender', image: 'mauve.png', colorName: 'Lavender', bgColor: '#D8C8E8', textColor: '#1d1a18' },
-          { name: 'Girls Peplum Top - Mint', image: 'sage.png', colorName: 'Mint', bgColor: '#C8E8D8', textColor: '#1d1a18' },
-          { name: 'Girls Peplum Top - Peach', image: 'beige.png', colorName: 'Peach', bgColor: '#F5D8C8', textColor: '#1d1a18' },
-          { name: 'Girls Peplum Top - Coral', image: 'red.png', colorName: 'Coral', bgColor: '#F5A8A0', textColor: '#FFFFFF' }
+          { name: 'Peplum Top - Cream', image: '/images/clothes/women/top/top1.png', colorName: 'Cream', bgColor: '#F3F0EA', textColor: '#1d1a18' },
+          { name: 'Peplum Top - White', image: '/images/clothes/women/top/top2.png', colorName: 'White', bgColor: '#F1F1EE', textColor: '#1d1a18' },
+          { name: 'Peplum Top - Sky Blue Gingham', image: '/images/clothes/women/top/top3.png', colorName: 'Sky Blue Gingham', bgColor: '#C8D8F2', textColor: '#1d1a18' },
+          { name: 'Peplum Top - Sage Green', image: '/images/clothes/women/top/top4.png', colorName: 'Sage Green', bgColor: '#C8D0B4', textColor: '#1d1a18' },
+          { name: 'Peplum Top - Mocha Brown', image: '/images/clothes/women/top/top5.png', colorName: 'Mocha Brown', bgColor: '#8B654E', textColor: '#FFFFFF' },
+          { name: 'Peplum Top - Obsidian Black', image: '/images/clothes/women/top/top6.png', colorName: 'Obsidian Black', bgColor: '#3A3A3A', textColor: '#FFFFFF' }
         ],
         dress: [
-          { name: 'Girls Sundress - Pink Blossom', image: 'dress4.png', colorName: 'Pink Blossom', bgColor: '#F5C8D0', textColor: '#1d1a18' },
-          { name: 'Girls Sundress - Lavender Dream', image: 'dress2.png', colorName: 'Lavender Dream', bgColor: '#D8C8E8', textColor: '#1d1a18' },
-          { name: 'Girls Sundress - Mint Breeze', image: 'dress1.png', colorName: 'Mint Breeze', bgColor: '#C8E8D8', textColor: '#1d1a18' },
-          { name: 'Girls Sundress - Peach Glow', image: 'dress3.png', colorName: 'Peach Glow', bgColor: '#F5D8C8', textColor: '#1d1a18' },
-          { name: 'Girls Sundress - Coral Star', image: 'dress5.png', colorName: 'Coral Star', bgColor: '#F5A8A0', textColor: '#FFFFFF' },
-          { name: 'Girls Sundress - Pearl White', image: 'dress6.png', colorName: 'Pearl White', bgColor: '#F0F0F0', textColor: '#1d1a18' }
+          { name: 'Summer Halter Dress - Polka White', image: '/images/clothes/women/dress/dress1.png', colorName: 'Polka White', bgColor: '#F4F2EE', textColor: '#1d1a18' },
+          { name: 'Summer Halter Dress - Sky Stripe', image: '/images/clothes/women/dress/dress2.png', colorName: 'Sky Stripe', bgColor: '#DDEAF5', textColor: '#1d1a18' },
+          { name: 'Summer Halter Dress - Buttercup Gingham', image: '/images/clothes/women/dress/dress3.png', colorName: 'Buttercup Gingham', bgColor: '#F2E29A', textColor: '#1d1a18' },
+          { name: 'Summer Halter Dress - Rose Gingham', image: '/images/clothes/women/dress/dress4.png', colorName: 'Rose Gingham', bgColor: '#E9BDD1', textColor: '#1d1a18' },
+          { name: 'Summer Halter Dress - Ocean Gingham', image: '/images/clothes/women/dress/dress5.png', colorName: 'Ocean Gingham', bgColor: '#AFC7E8', textColor: '#1d1a18' },
+          { name: 'Summer Halter Dress - Midnight Polka', image: '/images/clothes/women/dress/dress6.png', colorName: 'Midnight Polka', bgColor: '#36395F', textColor: '#FFFFFF' }
         ],
         tshirt: [
-          { name: 'Girls Soft Tee - Cotton White', image: 'white1.png', colorName: 'Cotton White', bgColor: '#F0F0F0', textColor: '#1d1a18' },
-          { name: 'Girls Soft Tee - Blush Pink', image: 'pink1.png', colorName: 'Blush Pink', bgColor: '#F5C8D0', textColor: '#1d1a18' },
-          { name: 'Girls Soft Tee - Soft Violet', image: 'mauve.png', colorName: 'Soft Violet', bgColor: '#D8C8E8', textColor: '#1d1a18' },
-          { name: 'Girls Soft Tee - Seafoam', image: 'sage.png', colorName: 'Seafoam', bgColor: '#C8E8D8', textColor: '#1d1a18' },
-          { name: 'Girls Soft Tee - Creamsicle', image: 'beige1.png', colorName: 'Creamsicle', bgColor: '#F5D8C8', textColor: '#1d1a18' },
-          { name: 'Girls Soft Tee - Hibiscus', image: 'red.png', colorName: 'Hibiscus', bgColor: '#F5A8A0', textColor: '#FFFFFF' }
+          { name: 'Premium T-Shirt - White', image: '/images/clothes/men/t-shirts/white.png', colorName: 'White', bgColor: '#F5F5F5', textColor: '#1d1a18' },
+          { name: 'Premium T-Shirt - Black', image: '/images/clothes/men/t-shirts/black.png', colorName: 'Black', bgColor: '#4A4A4A', textColor: '#FFFFFF' },
+          { name: 'Premium T-Shirt - Blue', image: '/images/clothes/men/t-shirts/blue.png', colorName: 'Blue', bgColor: '#2A3459', textColor: '#FFFFFF' },
+          { name: 'Premium T-Shirt - Yellow', image: '/images/clothes/men/t-shirts/yellow.png', colorName: 'Yellow', bgColor: '#FFE44D', textColor: '#1d1a18' },
+          { name: 'Premium T-Shirt - Red', image: '/images/clothes/men/t-shirts/red.png', colorName: 'Red', bgColor: '#D44545', textColor: '#FFFFFF' },
+          { name: 'Premium T-Shirt - Green', image: '/images/clothes/men/t-shirts/green.png', colorName: 'Green', bgColor: '#2A8C5E', textColor: '#FFFFFF' }
         ]
       }
     }
@@ -538,12 +538,12 @@ export const PRODUCTS_CONFIG: Record<string, Record<GenderType, CategoryData>> =
       },
       products: {
         jeans: [
-          { name: 'Classic Denim Jeans - Light Stone', image: 'pants1.png', colorName: 'Light Stone', bgColor: '#D9D9D9', textColor: '#1E1E1E' },
-          { name: 'Classic Denim Jeans - Mid Gray', image: 'pants2.png', colorName: 'Mid Gray', bgColor: '#D6D6D6', textColor: '#1E1E1E' },
-          { name: 'Classic Denim Jeans - Off White', image: 'pants3.png', colorName: 'Off White', bgColor: '#F3EFE6', textColor: '#1E1E1E' },
-          { name: 'Classic Denim Jeans - Silver Sand', image: 'pants4.png', colorName: 'Silver Sand', bgColor: '#D8D8D8', textColor: '#1E1E1E' },
-          { name: 'Classic Denim Jeans - Deep Indigo Navy', image: 'pants5.png', colorName: 'Deep Indigo Navy', bgColor: '#223A67', textColor: '#FFFFFF' },
-          { name: 'Classic Denim Jeans - Rustic Brown', image: 'pants6.png', colorName: 'Rustic Brown', bgColor: '#4A3328', textColor: '#FFFFFF' }
+          { name: 'Classic Denim Jeans - Light Stone', image: '/images/pants/men/pants/pants1.png', colorName: 'Light Stone', bgColor: '#D9D9D9', textColor: '#1E1E1E' },
+          { name: 'Classic Denim Jeans - Mid Gray', image: '/images/pants/men/pants/pants2.png', colorName: 'Mid Gray', bgColor: '#D6D6D6', textColor: '#1E1E1E' },
+          { name: 'Classic Denim Jeans - Off White', image: '/images/pants/men/pants/pants3.png', colorName: 'Off White', bgColor: '#F3EFE6', textColor: '#1E1E1E' },
+          { name: 'Classic Denim Jeans - Silver Sand', image: '/images/pants/men/pants/pants4.png', colorName: 'Silver Sand', bgColor: '#D8D8D8', textColor: '#1E1E1E' },
+          { name: 'Classic Denim Jeans - Deep Indigo Navy', image: '/images/pants/men/pants/pants5.png', colorName: 'Deep Indigo Navy', bgColor: '#223A67', textColor: '#FFFFFF' },
+          { name: 'Classic Denim Jeans - Rustic Brown', image: '/images/pants/men/pants/pants6.png', colorName: 'Rustic Brown', bgColor: '#4A3328', textColor: '#FFFFFF' }
         ],
         shorts: [
           { name: 'Everyday Shorts - White', image: 'pants1.png', colorName: 'White', bgColor: '#F5F5F5', textColor: '#1d1a18' },
