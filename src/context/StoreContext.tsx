@@ -16,6 +16,7 @@ interface StoreContextType {
   isDarkTheme: boolean;
   searchQuery: string;
   toast: { message: string; type?: 'info' | 'success' | 'warning' } | null;
+  ordersUpdated: number;
   setPage: (page: PageType, subCategory?: string, gender?: GenderType) => void;
   setGender: (gender: GenderType) => void;
   setSubCategory: (sub: string) => void;
@@ -40,39 +41,34 @@ interface StoreContextType {
   showToast: (message: string, type?: 'info' | 'success' | 'warning') => void;
   closeSplash: () => void;
   updateOrderStatus: (orderId: string, newStatus: string) => void;
+  refreshOrders: () => Promise<void>;
+  clearAllOrders: () => void;
+  loadUserOrders: () => void;
+  syncOrdersToServer: () => Promise<void>; // ✅ BAGO
+  isLoading: boolean;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
+const getCartStorageKey = (username: string) => {
+  return `chub_cart_${username.toLowerCase()}`;
+};
+
+const getOrdersStorageKey = (username: string) => {
+  return `chub_orders_${username.toLowerCase()}`;
+};
+
+// ✅ SERVER SYNC FUNCTION
+const SYNC_URL = 'http://localhost:3013/api/orders/sync';
+
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Navigation State
   const [page, setPageState] = useState<PageType>('home');
   const [gender, setGenderState] = useState<GenderType>('men');
   const [subCategory, setSubCategoryState] = useState<string>('tshirt');
   const [currentProductIndex, setCurrentProductIndex] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // Cart State from localStorage
-  const [cart, setCart] = useState<CartItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('chub_cart');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  // Orders State from localStorage
-  const [orders, setOrders] = useState<Order[]>(() => {
-    try {
-      const saved = localStorage.getItem('chub_orders');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  // User Auth State from localStorage
   const [user, setUser] = useState<User>(() => {
     try {
       const saved = localStorage.getItem('chub_user');
@@ -82,81 +78,327 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
-  // Splash State from sessionStorage
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    try {
+      if (user.isLoggedIn && user.username) {
+        const key = getCartStorageKey(user.username);
+        const saved = localStorage.getItem(key);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          console.log(`🛒 Loaded cart for ${user.username}:`, parsed.length, 'items');
+          return parsed;
+        }
+      }
+      return [];
+    } catch (e) {
+      console.error('Failed to load cart:', e);
+      return [];
+    }
+  });
+
+  const [orders, setOrders] = useState<Order[]>(() => {
+    try {
+      if (user.isLoggedIn && user.username) {
+        const key = getOrdersStorageKey(user.username);
+        const saved = localStorage.getItem(key);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          console.log(`📦 Loaded orders for ${user.username}:`, parsed.length);
+          return parsed;
+        }
+      }
+      return [];
+    } catch (e) {
+      console.error('Failed to load orders:', e);
+      return [];
+    }
+  });
+
+  const [ordersUpdated, setOrdersUpdated] = useState<number>(0);
+
   const [splashShown, setSplashShown] = useState<boolean>(() => {
     return sessionStorage.getItem('splash_shown') === 'true';
   });
 
-  // Toast Notification State
   const [toast, setToast] = useState<{ message: string; type?: 'info' | 'success' | 'warning' } | null>(null);
 
-  // Sync Cart to localStorage
+  // ✅ SYNC ORDERS TO SERVER - BAGONG FUNCTION
+  const syncOrdersToServer = async () => {
+    if (!user.isLoggedIn || !user.username) {
+      console.log('⚠️ Cannot sync: User not logged in');
+      return;
+    }
+
+    if (orders.length === 0) {
+      console.log('⏭️ No orders to sync');
+      return;
+    }
+
+    try {
+      console.log(`🔄 Syncing ${orders.length} orders to server...`);
+      const response = await fetch(SYNC_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orders })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`✅ Synced ${data.count || orders.length} orders to server`);
+      } else {
+        console.warn('⚠️ Failed to sync orders to server:', response.status);
+      }
+    } catch (error) {
+      console.error('Failed to sync orders:', error);
+    }
+  };
+
+  const loadUserOrders = () => {
+    if (!user.isLoggedIn || !user.username) {
+      console.log('⚠️ Cannot load orders: User not logged in');
+      setOrders([]);
+      return;
+    }
+
+    try {
+      const key = getOrdersStorageKey(user.username);
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setOrders(parsed);
+        console.log(`📦 Loaded ${parsed.length} orders for ${user.username}`);
+        // ✅ Auto-sync after loading
+        setTimeout(() => syncOrdersToServer(), 500);
+      } else {
+        setOrders([]);
+        console.log(`📦 No orders found for ${user.username}`);
+      }
+    } catch (e) {
+      console.error('Failed to load user orders:', e);
+      setOrders([]);
+    }
+  };
+
+  // ✅ Auto-sync tuwing may pagbabago sa orders
+  useEffect(() => {
+    if (user.isLoggedIn && user.username && orders.length > 0) {
+      const timer = setTimeout(() => {
+        syncOrdersToServer();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [orders, user.isLoggedIn, user.username]);
+
   useEffect(() => {
     try {
-      localStorage.setItem('chub_cart', JSON.stringify(cart));
+      if (user.isLoggedIn && user.username) {
+        const key = getCartStorageKey(user.username);
+        localStorage.setItem(key, JSON.stringify(cart));
+        console.log(`💾 Saved cart for ${user.username}:`, cart.length, 'items');
+      }
     } catch (e) {
-      console.error('Failed to sync cart to localStorage', e);
+      console.error('Failed to sync cart:', e);
     }
-  }, [cart]);
+  }, [cart, user]);
 
-  // Sync Orders to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem('chub_orders', JSON.stringify(orders));
-      localStorage.setItem('chub_admin_orders', JSON.stringify(orders));
+      if (user.isLoggedIn && user.username) {
+        const key = getOrdersStorageKey(user.username);
+        localStorage.setItem(key, JSON.stringify(orders));
+        console.log(`💾 Saved orders for ${user.username}:`, orders.length);
+      }
     } catch (e) {
-      console.error('Failed to sync orders to localStorage', e);
+      console.error('Failed to sync orders:', e);
     }
-  }, [orders]);
+  }, [orders, user]);
 
-  // Sync User to localStorage
+  useEffect(() => {
+    if (user.isLoggedIn && user.username) {
+      try {
+        const cartKey = getCartStorageKey(user.username);
+        const savedCart = localStorage.getItem(cartKey);
+        if (savedCart) {
+          const parsed = JSON.parse(savedCart);
+          setCart(parsed);
+          console.log(`🛒 Loaded cart for ${user.username}:`, parsed.length, 'items');
+        } else {
+          setCart([]);
+        }
+      } catch (e) {
+        console.error('Failed to load user cart:', e);
+        setCart([]);
+      }
+
+      try {
+        const ordersKey = getOrdersStorageKey(user.username);
+        const savedOrders = localStorage.getItem(ordersKey);
+        if (savedOrders) {
+          const parsed = JSON.parse(savedOrders);
+          setOrders(parsed);
+          console.log(`📦 Loaded orders for ${user.username}:`, parsed.length);
+          // ✅ Auto-sync after loading
+          setTimeout(() => syncOrdersToServer(), 500);
+        } else {
+          setOrders([]);
+          console.log(`📦 No orders found for ${user.username}`);
+        }
+      } catch (e) {
+        console.error('Failed to load user orders:', e);
+        setOrders([]);
+      }
+    } else {
+      setCart([]);
+      setOrders([]);
+    }
+  }, [user.isLoggedIn, user.username]);
+
   useEffect(() => {
     try {
       localStorage.setItem('chub_user', JSON.stringify(user));
     } catch (e) {
-      console.error('Failed to sync user to localStorage', e);
+      console.error('Failed to sync user:', e);
     }
   }, [user]);
 
-  // ✅ Listen for BroadcastChannel messages from Admin
+  // ✅ Real-time status updates from admin via SSE - FIXED
   useEffect(() => {
-    console.log('📡 Store: Setting up BroadcastChannel listener...');
+    let es: EventSource | null = null;
+    const serverUrl = 'http://localhost:3013';
+    
+    if (!user.isLoggedIn || !user.username) {
+      console.log('⏭️ Skipping SSE - user not logged in');
+      return;
+    }
     
     try {
-      const channel = new BroadcastChannel('chub_orders_channel');
-      channel.onmessage = (event) => {
-        console.log('📦 Store received broadcast:', event.data);
-        if (event.data.type === 'UPDATE_ORDER' || event.data.type === 'NEW_ORDER') {
-          // ✅ I-update ang orders
-          setOrders(event.data.orders);
-          localStorage.setItem('chub_orders', JSON.stringify(event.data.orders));
-          localStorage.setItem('chub_admin_orders', JSON.stringify(event.data.orders));
-          showToast('Orders updated!', 'success');
+      console.log('🔌 Connecting to SSE for user:', user.username);
+      es = new EventSource(`${serverUrl}/api/orders/stream/public`);
+      
+      es.onopen = () => {
+        console.log('✅ SSE connected');
+      };
+      
+      es.onerror = (error) => {
+        console.warn('⚠️ SSE error:', error);
+      };
+      
+      // ✅ ORDER UPDATE EVENT - Fixed to trigger re-render
+      es.addEventListener('order_update', (event: MessageEvent) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('📦 order_update received:', data);
+          
+          const { orderId, status, order } = data;
+          
+          if (!orderId || !status) return;
+          if (!user.isLoggedIn || !user.username) return;
+          
+          console.log(`📦 Order update received: ${orderId} -> ${status}`);
+          
+          // ✅ If order object is provided, use it directly
+          if (order) {
+            setOrders(prev => {
+              const exists = prev.some(o => o.orderId === orderId);
+              if (!exists) {
+                const newOrders = [order, ...prev];
+                const key = getOrdersStorageKey(user.username);
+                localStorage.setItem(key, JSON.stringify(newOrders));
+                showToast(`Order ${orderId} is now ${status}`, 'success');
+                // ✅ Sync to server
+                setTimeout(() => syncOrdersToServer(), 500);
+                return newOrders;
+              }
+              
+              const updatedOrders = prev.map(o =>
+                o.orderId === orderId ? { ...o, ...order } : o
+              );
+              const key = getOrdersStorageKey(user.username);
+              localStorage.setItem(key, JSON.stringify(updatedOrders));
+              showToast(`Order ${orderId} is now ${status}`, 'success');
+              // ✅ Sync to server
+              setTimeout(() => syncOrdersToServer(), 500);
+              return updatedOrders;
+            });
+            return;
+          }
+          
+          // ✅ If no order object, fetch from backend
+          setOrders(prev => {
+            const exists = prev.some(o => o.orderId === orderId);
+            
+            if (!exists) {
+              fetch(`${serverUrl}/api/orders/${orderId}`)
+                .then(res => res.json())
+                .then((fullOrder: Order) => {
+                  if (fullOrder && fullOrder.customer?.name?.toLowerCase() === user.username.toLowerCase()) {
+                    setOrders(prevOrders => {
+                      const newOrders = [fullOrder, ...prevOrders.filter(o => o.orderId !== orderId)];
+                      const key = getOrdersStorageKey(user.username);
+                      localStorage.setItem(key, JSON.stringify(newOrders));
+                      // ✅ Sync to server
+                      setTimeout(() => syncOrdersToServer(), 500);
+                      return newOrders;
+                    });
+                    showToast(`Order ${orderId} is now ${status}`, 'success');
+                  }
+                })
+                .catch(err => console.error('Failed to fetch order:', err));
+              return prev;
+            }
+            
+            const updatedOrders = prev.map(o =>
+              o.orderId === orderId ? { ...o, status: status as Order['status'] } : o
+            );
+            const key = getOrdersStorageKey(user.username);
+            localStorage.setItem(key, JSON.stringify(updatedOrders));
+            showToast(`Order ${orderId} is now ${status}`, 'success');
+            // ✅ Sync to server
+            setTimeout(() => syncOrdersToServer(), 500);
+            return updatedOrders;
+          });
+        } catch (e) {
+          console.error('❌ Bad SSE payload:', e);
         }
-      };
-      return () => {
-        channel.close();
-      };
+      });
+      
+      // ✅ NEW ORDER EVENT
+      es.addEventListener('new_order', (event: MessageEvent) => {
+        try {
+          const newOrder = JSON.parse(event.data) as Order;
+          console.log('📦 new_order received:', newOrder);
+          
+          if (!user.isLoggedIn || !user.username) return;
+          
+          if (newOrder.customer?.name?.toLowerCase() === user.username.toLowerCase()) {
+            setOrders(prev => {
+              if (prev.some(o => o.orderId === newOrder.orderId)) return prev;
+              const updated = [newOrder, ...prev];
+              const key = getOrdersStorageKey(user.username);
+              localStorage.setItem(key, JSON.stringify(updated));
+              showToast(`Order ${newOrder.orderId} placed!`, 'success');
+              // ✅ Sync to server
+              setTimeout(() => syncOrdersToServer(), 500);
+              return updated;
+            });
+          }
+        } catch (e) {
+          console.error('❌ Bad new_order:', e);
+        }
+      });
+      
     } catch (e) {
-      console.log('BroadcastChannel not supported');
+      console.error('❌ Failed to setup SSE:', e);
     }
-
-    // ✅ Listen for storage changes from other tabs
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'chub_orders' || e.key === 'chub_admin_orders') {
-        const saved = localStorage.getItem('chub_orders');
-        if (saved) {
-          setOrders(JSON.parse(saved));
-        }
+    
+    return () => {
+      if (es) {
+        es.close();
+        console.log('🔌 SSE closed');
       }
     };
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
+  }, [user.isLoggedIn, user.username]);
 
-  // Compute Active Product Background Color & Text Color
   const currentCategoryConfig = PRODUCTS_CONFIG[page]?.[gender];
   const currentProductList = currentCategoryConfig?.products?.[subCategory] || [];
   const activeProduct = currentProductList[currentProductIndex] || currentProductList[0];
@@ -225,6 +467,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     },
     qty = 1
   ) => {
+    if (!user.isLoggedIn) {
+      showToast('Please login first to add items to cart', 'warning');
+      setPage('login');
+      return;
+    }
+
     setCart(prev => {
       const existingIdx = prev.findIndex(
         cartItem => cartItem.id === item.id && cartItem.size === item.size
@@ -237,7 +485,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return [...prev, { ...item, qty }];
       }
     });
-    showToast(`Added ${item.name} (${item.size || 'Standard'}) to cart!`, 'success');
+    showToast(`Added ${item.name} to cart!`, 'success');
   };
 
   const updateCartQty = (id: string, size: string | undefined, delta: number) => {
@@ -250,7 +498,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           }
           return item;
         })
-        .filter(Boolean) as CartItem[];
+        .filter((item): item is CartItem => item !== null);
     });
   };
 
@@ -261,21 +509,39 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const clearCart = () => {
     setCart([]);
+    if (user.isLoggedIn && user.username) {
+      const key = getCartStorageKey(user.username);
+      localStorage.setItem(key, JSON.stringify([]));
+    }
     showToast('Cart cleared', 'info');
   };
 
-  // ✅ CREATE ORDER - Save to Backend API
+  const clearAllOrders = () => {
+    if (user.isLoggedIn && user.username) {
+      const key = getOrdersStorageKey(user.username);
+      localStorage.removeItem(key);
+      setOrders([]);
+      showToast(`All orders for ${user.username} cleared!`, 'info');
+      // ✅ Sync to server
+      setTimeout(() => syncOrdersToServer(), 500);
+    }
+  };
+
+  // ✅ CREATE ORDER
   const createOrder = async (
     customer: CustomerDetails,
     discountCode: string,
     paymentMethod: string
   ): Promise<Order | null> => {
     console.log('🛒 Creating order...');
-    console.log('Cart:', cart);
-    console.log('Customer:', customer);
     
     if (cart.length === 0) {
       showToast('Cart is empty!', 'warning');
+      return null;
+    }
+
+    if (!user.isLoggedIn) {
+      showToast('Please login first', 'warning');
       return null;
     }
 
@@ -308,13 +574,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       discountCode: cleanCode,
       total,
       payment: paymentMethod,
-      status: 'Pending'
+      status: 'To Ship'
     };
 
-    console.log('📦 New order:', newOrder);
-
     try {
-      console.log('📡 Sending to backend...');
+      console.log('📦 Sending order to backend...');
+      console.log('📦 Order data:', JSON.stringify(newOrder, null, 2));
+      
       const response = await fetch('http://localhost:3013/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -325,93 +591,141 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Server error:', errorText);
-        throw new Error(`Server error: ${response.status}`);
+        console.error('❌ Server error response:', errorText);
+        throw new Error(`Server error: ${response.status} - ${errorText}`);
       }
       
-      const data = await response.json();
+      const data = await response.json() as { success: boolean; order: Order };
       console.log('✅ Order saved:', data);
-      
-      setOrders(data.orders);
-      localStorage.setItem('chub_orders', JSON.stringify(data.orders));
-      localStorage.setItem('chub_admin_orders', JSON.stringify(data.orders));
-      
-      // ✅ Broadcast sa Admin
-      try {
-        const channel = new BroadcastChannel('chub_orders_channel');
-        channel.postMessage({ 
-          type: 'NEW_ORDER', 
-          orders: data.orders 
+
+      if (user.isLoggedIn && user.username) {
+        setOrders(prev => {
+          const updated = [newOrder, ...prev];
+          const key = getOrdersStorageKey(user.username);
+          localStorage.setItem(key, JSON.stringify(updated));
+          return updated;
         });
-        channel.close();
-        console.log('✅ Order broadcasted to admin dashboard');
-      } catch (e) {
-        console.log('BroadcastChannel not supported');
       }
-      
+
       setCart([]);
-      localStorage.setItem('chub_cart', JSON.stringify([]));
-      
+      if (user.isLoggedIn && user.username) {
+        const cartKey = getCartStorageKey(user.username);
+        localStorage.setItem(cartKey, JSON.stringify([]));
+      }
+
+      // ✅ Sync to server
+      setTimeout(() => syncOrdersToServer(), 500);
+
       showToast(`Order ${newOrder.orderId} placed successfully!`, 'success');
       return newOrder;
       
     } catch (error) {
       console.error('❌ Failed to save order:', error);
-      showToast('Failed to place order. Please try again.', 'error');
+      showToast('Failed to place order. Please try again.', 'warning');
       return null;
     }
   };
 
-  // ✅ UPDATE ORDER STATUS - Save to Backend API
-  const updateOrderStatus = async (orderId: string, newStatus: string) => {
-    console.log(`🔄 Updating order ${orderId} to ${newStatus}...`);
-    
-    try {
-      const response = await fetch(`http://localhost:3013/api/orders/${orderId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to update order');
-      }
-      
-      const data = await response.json();
-      console.log('✅ Order updated:', data);
-      
-      setOrders(data.orders);
-      localStorage.setItem('chub_orders', JSON.stringify(data.orders));
-      localStorage.setItem('chub_admin_orders', JSON.stringify(data.orders));
-      
-      // ✅ Broadcast sa Admin
-      try {
-        const channel = new BroadcastChannel('chub_orders_channel');
-        channel.postMessage({ 
-          type: 'UPDATE_ORDER', 
-          orders: data.orders 
-        });
-        channel.close();
-        console.log('📡 Broadcast sent to admin');
-      } catch (e) {
-        console.log('BroadcastChannel not supported');
-      }
-      
-      showToast(`Order ${orderId} updated to ${newStatus}`, 'success');
-    } catch (error) {
-      console.error('❌ Failed to update order:', error);
-      showToast('Failed to update order. Please try again.', 'error');
+  const refreshOrders = async () => {
+    if (!user.isLoggedIn || !user.username) {
+      showToast('Please login first', 'warning');
+      return;
     }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch('http://localhost:3013/api/orders');
+      if (response.ok) {
+        const serverOrders = await response.json() as Order[];
+        
+        const userOrders = serverOrders.filter((order: Order) => {
+          const customerName = order.customer?.name?.toLowerCase().trim() || '';
+          return customerName === user.username.toLowerCase().trim();
+        });
+        
+        setOrders(prev => {
+          const allOrders = [...userOrders];
+          prev.forEach(localOrder => {
+            if (!userOrders.some((so: Order) => so.orderId === localOrder.orderId)) {
+              allOrders.push(localOrder);
+            }
+          });
+          const key = getOrdersStorageKey(user.username);
+          localStorage.setItem(key, JSON.stringify(allOrders));
+          return allOrders;
+        });
+        // ✅ Sync to server
+        setTimeout(() => syncOrdersToServer(), 500);
+        showToast(`Orders refreshed! (${userOrders.length} orders)`, 'success');
+      } else {
+        showToast('Failed to refresh orders', 'warning');
+      }
+    } catch (error) {
+      console.error('Failed to refresh orders:', error);
+      showToast('Failed to refresh orders', 'warning');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    showToast('Order status updates are automatic via the admin panel.', 'info');
   };
 
   const login = (username: string) => {
     const formatted = username.charAt(0).toUpperCase() + username.slice(1).toLowerCase();
+    
+    console.log('🔑 Logging in user:', formatted);
+    
     setUser({ username: formatted, isLoggedIn: true });
+    
+    try {
+      const ordersKey = `chub_orders_${formatted.toLowerCase()}`;
+      const savedOrders = localStorage.getItem(ordersKey);
+      console.log('📦 Orders key:', ordersKey);
+      console.log('📦 Saved orders:', savedOrders);
+      
+      if (savedOrders) {
+        const parsed = JSON.parse(savedOrders);
+        setOrders(parsed);
+        console.log(`✅ Loaded ${parsed.length} orders for ${formatted}`);
+        // ✅ Sync to server
+        setTimeout(() => syncOrdersToServer(), 500);
+      } else {
+        setOrders([]);
+        console.log('❌ No orders found in localStorage');
+      }
+    } catch (e) {
+      console.error('Failed to load orders on login:', e);
+      setOrders([]);
+    }
+    
+    try {
+      const cartKey = `chub_cart_${formatted.toLowerCase()}`;
+      const savedCart = localStorage.getItem(cartKey);
+      if (savedCart) {
+        const parsed = JSON.parse(savedCart);
+        setCart(parsed);
+        console.log(`🛒 Loaded ${parsed.length} items for ${formatted}`);
+      } else {
+        setCart([]);
+      }
+    } catch (e) {
+      console.error('Failed to load cart on login:', e);
+      setCart([]);
+    }
+    
+    setOrdersUpdated(prev => prev + 1);
+    console.log('🔄 ordersUpdated set to:', ordersUpdated + 1);
+    
     showToast(`Welcome back, ${formatted}!`, 'success');
   };
 
   const logout = () => {
+    setCart([]);
+    setOrders([]);
     setUser({ username: '', isLoggedIn: false });
+    setOrdersUpdated(0);
     showToast('Logged out successfully', 'info');
   };
 
@@ -436,6 +750,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isDarkTheme,
         searchQuery,
         toast,
+        ordersUpdated,
         setPage,
         setGender,
         setSubCategory,
@@ -451,6 +766,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         showToast,
         closeSplash,
         updateOrderStatus,
+        refreshOrders,
+        clearAllOrders,
+        loadUserOrders,
+        syncOrdersToServer, // ✅ BAGO
+        isLoading,
       }}
     >
       {children}

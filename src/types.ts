@@ -18,6 +18,25 @@ export type PageType =
 
 export type GenderType = 'men' | 'women' | 'boys' | 'girls';
 
+export type OrderStatus = 
+  | 'To Pay'
+  | 'To Ship'
+  | 'Shipped'
+  | 'Out for Delivery'
+  | 'Delivered'
+  | 'To Review'
+  | 'Completed'
+  | 'Cancelled';
+
+export interface Review {
+  orderId: string;
+  customerName: string;
+  rating: number;
+  comment: string;
+  date: string;
+  productName?: string;
+}
+
 export interface ProductItem {
   id: string;
   name: string;
@@ -60,6 +79,8 @@ export interface CustomerDetails {
   address: string;
 }
 
+// c-hub-store/src/types.ts
+
 export interface Order {
   orderId: string;
   date: string;
@@ -71,7 +92,24 @@ export interface Order {
   discountCode: string;
   total: number;
   payment: string;
-  status: 'Pending' | 'Completed' | 'Processing';
+  status: OrderStatus;
+  statusHistory?: { status: OrderStatus; timestamp: string }[];
+  review?: Review;
+  updatedAt?: string;
+  // ✅ Add fulfillment and channel for timeline
+  fulfillment?: {
+    carrier?: string;
+    trackingNumber?: string;
+    estimatedDelivery?: string;
+    timeline?: Array<{
+      status: string;
+      time: string;
+      location: string;
+      note: string;
+      completed: boolean;
+    }>;
+  };
+  channel?: string;
 }
 
 export interface User {
