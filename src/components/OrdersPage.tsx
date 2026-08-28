@@ -271,7 +271,7 @@ export const OrdersPage: React.FC = () => {
   // ✅ SSE connection para sa real-time updates
   useEffect(() => {
     let es: EventSource | null = null;
-    const serverUrl = 'http://localhost:3013';
+    const serverUrl = 'https://c-hub-backend-ijy4.onrender.com';
     
     if (!user.isLoggedIn || !user.username) {
       console.log('⏭️ Skipping SSE - user not logged in');
@@ -447,7 +447,7 @@ export const OrdersPage: React.FC = () => {
 
   // ✅ Handle review submission
   const handleSubmitReview = (orderId: string, rating: number, comment: string) => {
-    fetch('http://localhost:3013/api/reviews', {
+    fetch('https://c-hub-backend-ijy4.onrender.com/api/reviews', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -489,7 +489,7 @@ export const OrdersPage: React.FC = () => {
     );
   };
 
-  // ✅ Handle Delete Order - WALANG CONFIRMATION at mag-sync sa server
+  // ✅ Handle Delete Order
   const handleDeleteOrder = async (orderId: string) => {
     try {
       // ✅ 1. I-add sa deleted set para hindi na bumalik
@@ -510,7 +510,7 @@ export const OrdersPage: React.FC = () => {
       
       // ✅ 4. I-delete sa server
       try {
-        await fetch(`http://localhost:3013/api/orders/${orderId}`, {
+        await fetch(`https://c-hub-backend-ijy4.onrender.com/api/orders/${orderId}`, {
           method: 'DELETE'
         });
         console.log(`✅ Deleted order ${orderId} from server`);
@@ -547,7 +547,7 @@ export const OrdersPage: React.FC = () => {
   // ✅ Show loading state
   if (loading || isLoading) {
     return (
-      <div className="w-full max-w-200 mx-auto px-4 py-16 text-center space-y-4">
+      <div className="w-full max-w-7xl mx-auto px-4 py-16 text-center space-y-4">
         <div className="animate-spin w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto"></div>
         <p className="text-stone-500 dark:text-stone-400">Loading your orders...</p>
       </div>
@@ -557,7 +557,7 @@ export const OrdersPage: React.FC = () => {
   // ✅ Show login prompt if not logged in
   if (!user.isLoggedIn) {
     return (
-      <div className="w-full max-w-200 mx-auto px-4 py-16 text-center space-y-6 animate-fadeIn">
+      <div className="w-full max-w-7xl mx-auto px-4 py-16 text-center space-y-6 animate-fadeIn">
         <div className="w-20 h-20 mx-auto rounded-3xl bg-stone-100 dark:bg-stone-800 text-stone-400 flex items-center justify-center text-3xl shadow-inner">
           <User className="w-10 h-10" />
         </div>
@@ -581,7 +581,7 @@ export const OrdersPage: React.FC = () => {
 
   if (displayOrders.length === 0) {
     return (
-      <div className="w-full max-w-200 mx-auto px-4 py-16 text-center space-y-6 animate-fadeIn">
+      <div className="w-full max-w-7xl mx-auto px-4 py-16 text-center space-y-6 animate-fadeIn">
         <div className="w-20 h-20 mx-auto rounded-3xl bg-stone-100 dark:bg-stone-800 text-stone-400 flex items-center justify-center text-3xl shadow-inner">
           <Package className="w-10 h-10" />
         </div>
@@ -606,7 +606,7 @@ export const OrdersPage: React.FC = () => {
   }
 
   return (
-    <div className="w-full max-w-[1100px] mx-auto px-4 sm:px-8 py-8 space-y-8 animate-fadeIn">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-8 animate-fadeIn">
       
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-stone-200 dark:border-stone-800">
@@ -650,12 +650,11 @@ export const OrdersPage: React.FC = () => {
                   <p className="text-lg font-black font-mono text-stone-900 dark:text-indigo-400">{order.orderId}</p>
                 </div>
 
-                {/* ✅ DITO NA MAY DELETE ICON SA TABI NG STATUS */}
                 <div className="flex items-center gap-2 text-xs">
                   <span className="text-stone-500">{order.date}</span>
                   {getStatusBadge(status)}
                   
-                  {/* Maliit na Delete Icon sa tabi ng status */}
+                  {/* Delete Icon */}
                   <button
                     onClick={() => handleDeleteOrder(order.orderId)}
                     className="p-1.5 rounded-lg text-stone-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
@@ -666,15 +665,15 @@ export const OrdersPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* ✅ Status Progress Bar */}
+              {/* Status Progress Bar */}
               <div className="py-4">
                 <StatusProgress currentStatus={status} />
               </div>
 
-              {/* ✅ STATUS INFO */}
+              {/* Status Info */}
               <div className="flex items-center justify-between p-4 rounded-xl bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700">
                 <div className="flex items-center gap-3">
-                  <span className={`${statusDisplay.color}`}>
+                  <span className={statusDisplay.color}>
                     {statusDisplay.icon}
                   </span>
                   <div>
@@ -693,7 +692,7 @@ export const OrdersPage: React.FC = () => {
                 )}
               </div>
 
-              {/* ✅ Timeline Events */}
+              {/* Timeline Events */}
               {timeline.length > 0 && (
                 <div className="mb-4 space-y-2 px-2">
                   <div className="space-y-2">
@@ -832,7 +831,7 @@ export const OrdersPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* ✅ REVIEW BUTTON */}
+                  {/* Review Button */}
                   {(status === 'Delivered' || status === 'To Review' || (status === 'Completed' && !hasReview)) && (
                     <button
                       onClick={() => setReviewingOrder(order)}
