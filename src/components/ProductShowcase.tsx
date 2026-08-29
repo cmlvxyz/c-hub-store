@@ -138,61 +138,73 @@ export const ProductShowcase: React.FC = () => {
   const textColorClass = isDarkTheme ? 'text-white' : 'text-stone-900';
   const subTextColorClass = isDarkTheme ? 'text-white/70' : 'text-stone-700';
 
-  // ANIMATION LOGIC - Pure diagonal slide, NO ZOOM
-const slideVariants: Variants = {
-  enter: (dir: number) => {
-    if (dir > 0) {
-      // NEXT PRODUCT: Galing sa bottom-right (↘) - pure slide lang
+  // ANIMATION LOGIC: 
+  // - Current product exits to TOP-LEFT (↖) with fade
+  // - Next product enters from BOTTOM-RIGHT (↘) with bounce
+  const slideVariants: Variants = {
+    enter: (dir: number) => {
+      if (dir > 0) {
+        // NEXT PRODUCT: Galing sa bottom-right (↘)
+        return {
+          x: 400,
+          y: 300,
+          scale: 0.3,
+          opacity: 0,
+          rotate: 10,
+          zIndex: 30
+        };
+      }
       return {
-        x: 400,
-        y: 300,
+        x: -400,
+        y: -300,
+        scale: 0.3,
         opacity: 0,
+        rotate: -10,
         zIndex: 30
       };
-    }
-    return {
-      x: -400,
-      y: -300,
-      opacity: 0,
-      zIndex: 30
-    };
-  },
-  center: {
-    x: 0,
-    y: 0,
-    opacity: 1,
-    zIndex: 20,
-    transition: {
-      duration: 0.8,
-      ease: [0.22, 1, 0.36, 1]
-    }
-  },
-  exit: (dir: number) => {
-    if (dir > 0) {
-      // CURRENT PRODUCT: Lumabas pa-top-left (↖) - pure slide lang
+    },
+    center: {
+      x: 0,
+      y: 0,
+      opacity: 1,
+      scale: 1,
+      rotate: 0,
+      zIndex: 20,
+      transition: {
+        duration: 2.5,
+        ease: [0.22, 1, 0.36, 1]
+      }
+    },
+    exit: (dir: number) => {
+      if (dir > 0) {
+        // CURRENT PRODUCT: Lumabas pa-top-left (↖)
+        return {
+          x: -350,
+          y: -250,
+          opacity: 0,
+          scale: 0.4,
+          rotate: -12,
+          zIndex: 10,
+          transition: {
+            duration: 1.5,
+            ease: [0.22, 1, 0.36, 1]
+          }
+        };
+      }
       return {
-        x: -350,
-        y: -250,
+        x: 350,
+        y: 250,
         opacity: 0,
+        scale: 0.4,
+        rotate: 12,
         zIndex: 10,
         transition: {
-          duration: 0.6,
+          duration: 1.5,
           ease: [0.22, 1, 0.36, 1]
         }
       };
     }
-    return {
-      x: 350,
-      y: 250,
-      opacity: 0,
-      zIndex: 10,
-      transition: {
-        duration: 0.6,
-        ease: [0.22, 1, 0.36, 1]
-      }
-    };
-  }
-};
+  };
 
   return (
     <div className="w-full relative transition-colors duration-700 py-3 sm:py-6 px-4 sm:px-8">
