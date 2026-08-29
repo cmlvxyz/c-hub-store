@@ -371,7 +371,27 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           console.error('❌ Bad new_order:', e);
         }
       });
-      
+
+      es.addEventListener('order-deleted', (event: MessageEvent) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('🗑️ order-deleted received:', data);
+          const { orderId } = data;
+          if (!orderId) return;
+          if (!user.isLoggedIn || !user.username) return;
+
+          setOrders(prev => {
+            const updatedOrders = prev.filter(o => o.orderId !== orderId);
+            if (updatedOrders.length === prev.length) return prev;
+            const key = getOrdersStorageKey(user.username);
+            localStorage.setItem(key, JSON.stringify(updatedOrders));
+            return updatedOrders;
+          });
+        } catch (e) {
+          console.error('❌ Bad order-deleted payload:', e);
+        }
+      });
+
     } catch (e) {
       console.error('❌ Failed to setup SSE:', e);
     }
