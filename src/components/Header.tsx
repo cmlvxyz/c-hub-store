@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
-import { ShoppingCart, Bell, Menu, X, LogOut, Package, ChevronDown, Box } from 'lucide-react';
+import { ShoppingCart, Bell, Menu, X, LogOut, Package, ChevronDown, Box, CheckCircle2, AlertCircle } from 'lucide-react';
 import { PageType } from '../types';
 
 export const Header: React.FC = () => {
-  const { page, setPage, cart, orders, user, logout, isDarkTheme } = useStore();
+  const { page, setPage, cart, orders, user, logout, isDarkTheme, notifications, unreadCount, markNotificationsRead, removeNotification, clearNotifications } = useStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(0);
+  const [notificationOpen, setNotificationOpen] = useState(false);
 
   const totalCartCount = cart.reduce((total, item) => total + item.qty, 0);
 
@@ -17,25 +17,44 @@ export const Header: React.FC = () => {
     ...(user.isLoggedIn && orders.length > 0 ? [{ label: 'Orders', page: 'orders' as PageType }] : [])
   ];
 
-  // Handle notification click
+  // Handle notification click - buksan ang dropdown at mark bilang read
   const handleNotificationClick = () => {
-    setNotificationCount(0);
-    // Optional: Show notification panel or toast
+    setNotificationOpen(prev => !prev);
+    if (!notificationOpen) {
+      markNotificationsRead();
+    }
   };
 
-  // Simulate receiving notifications
+  const formatTime = (iso: string) => {
+    const d = new Date(iso);
+    const now = Date.now();
+    const diff = now - d.getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d ago`;
+  };
+
   useEffect(() => {
-    const interval = setInterval(() => {
-      setNotificationCount(prev => prev + 1);
-    }, 30000);
-    
-    return () => clearInterval(interval);
-  }, []);
+    if (!notificationOpen) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('#navNotificationBtn') && !target.closest('#notificationPanel')) {
+        setNotificationOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [notificationOpen]);
 
   const handleNavClick = (targetPage: PageType) => {
     setPage(targetPage);
     setMobileMenuOpen(false);
     setUserDropdownOpen(false);
+    setNotificationOpen(false);
   };
 
   const navColorClass = isDarkTheme ? 'text-white' : 'text-stone-900';
@@ -162,21 +181,109 @@ export const Header: React.FC = () => {
                 )}
               </button>
 
-              <button
-                id="navNotificationBtn"
-                onClick={handleNotificationClick}
-                className={`relative p-2 rounded-full transition-transform active:scale-95 cursor-pointer ${
-                  isDarkTheme ? 'text-white hover:text-indigo-300' : 'text-stone-900 hover:text-indigo-600 hover:bg-stone-100'
-                }`}
-                aria-label="Notifications"
-              >
-                <Bell className="w-5 h-5 stroke-[2.2]" />
-                {notificationCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full ring-2 ring-white dark:ring-stone-900">
-                    {notificationCount > 9 ? '9+' : notificationCount}
-                  </span>
+              <div className="relative">
+                <button
+                  id="navNotificationBtn"
+                  onClick={handleNotificationClick}
+                  className={`relative p-2 rounded-full transition-transform active:scale-95 cursor-pointer ${
+                    isDarkTheme ? 'text-white hover:text-indigo-300' : 'text-stone-900 hover:text-indigo-600 hover:bg-stone-100'
+                  }`}
+                  aria-label="Notifications"
+                >
+                  <Bell className="w-5 h-5 stroke-[2.2]" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full ring-2 ring-white dark:ring-stone-900 animate-pulse">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {notificationOpen && (
+                  <div
+                    id="notificationPanel"
+                    className="absolute right-0 mt-2 w-80 sm:w-96 bg-white text-stone-800 rounded-2xl shadow-2xl border border-stone-100 z-50 overflow-hidden animate-fadeIn"
+                  >
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100">
+                      <p className="font-bold text-sm text-stone-900">Notifications</p>
+                      <div className="flex items-center gap-2">
+                        {notifications.length > 0 && (
+                          <button
+                            onClick={clearNotifications}
+                            className="text-[11px] font-semibold text-stone-400 hover:text-red-500 transition-colors"
+                          >
+                            Clear all
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setNotificationOpen(false)}
+                          className="text-stone-400 hover:text-stone-700 p-0.5"
+                          aria-label="Close notifications"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="max-h-80 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="px-4 py-10 text-center">
+                          <Bell className="w-8 h-8 mx-auto text-stone-200 mb-2" strokeWidth={1.5} />
+                          <p className="text-xs text-stone-400 font-semibold">No notifications yet</p>
+                          <p className="text-[11px] text-stone-300 mt-0.5">
+                            You'll be notified when your order status changes.
+                          </p>
+                        </div>
+                      ) : (
+                        notifications.map((n) => (
+                          <div
+                            key={n.id}
+                            className={`flex items-start gap-2.5 px-4 py-3 border-b border-stone-50 ${
+                              n.read ? '' : 'bg-indigo-50/40'
+                            }`}
+                          >
+                            <span
+                              className={`mt-0.5 w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+                                n.type === 'success'
+                                  ? 'bg-emerald-100 text-emerald-600'
+                                  : n.type === 'warning'
+                                  ? 'bg-amber-100 text-amber-600'
+                                  : 'bg-indigo-100 text-indigo-600'
+                              }`}
+                            >
+                              {n.type === 'success' ? (
+                                <CheckCircle2 className="w-4 h-4" />
+                              ) : n.type === 'warning' ? (
+                                <AlertCircle className="w-4 h-4" />
+                              ) : (
+                                <Bell className="w-4 h-4" />
+                              )}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-stone-800 leading-snug">{n.message}</p>
+                              {n.orderId && (
+                                <button
+                                  onClick={() => handleNavClick('orders')}
+                                  className="text-[11px] font-bold text-indigo-600 hover:underline mt-0.5 block"
+                                >
+                                  View Order
+                                </button>
+                              )}
+                              <p className="text-[10px] text-stone-400 mt-0.5">{formatTime(n.timestamp)}</p>
+                            </div>
+                            <button
+                              onClick={() => removeNotification(n.id)}
+                              className="text-stone-300 hover:text-stone-600 p-0.5 shrink-0"
+                              aria-label="Dismiss notification"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
                 )}
-              </button>
+              </div>
             </div>
           ) : (
             <div className="flex items-center gap-3">

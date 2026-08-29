@@ -18,6 +18,12 @@ interface StoreContextType {
   searchQuery: string;
   toast: { message: string; type?: 'info' | 'success' | 'warning' } | null;
   ordersUpdated: number;
+  notifications: NotificationItem[];
+  unreadCount: number;
+  addNotification: (message: string, type?: 'info' | 'success' | 'warning', orderId?: string) => void;
+  markNotificationsRead: () => void;
+  removeNotification: (id: string) => void;
+  clearNotifications: () => void;
   setPage: (page: PageType, subCategory?: string, gender?: GenderType) => void;
   setGender: (gender: GenderType) => void;
   setSubCategory: (sub: string) => void;
@@ -47,6 +53,15 @@ interface StoreContextType {
   loadUserOrders: () => void;
   syncOrdersToServer: () => Promise<void>; 
   isLoading: boolean;
+}
+
+interface NotificationItem {
+  id: string;
+  message: string;
+  type: 'info' | 'success' | 'warning';
+  orderId?: string;
+  timestamp: string;
+  read: boolean;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -120,6 +135,36 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [splashShown, setSplashShown] = useState<boolean>(false);
 
   const [toast, setToast] = useState<{ message: string; type?: 'info' | 'success' | 'warning' } | null>(null);
+
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+  const addNotification = (message: string, type: 'info' | 'success' | 'warning' = 'info', orderId?: string) => {
+    const notification: NotificationItem = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      message,
+      type,
+      orderId,
+      timestamp: new Date().toISOString(),
+      read: false,
+    };
+    setNotifications(prev => [notification, ...prev].slice(0, 30));
+    // Isa ring visual toast para siguradong makita ng user
+    showToast(message, type);
+  };
+
+  const markNotificationsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  };
+
+  const removeNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  const clearNotifications = () => {
+    setNotifications([]);
+  };
+
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   const syncOrdersToServer = async () => {
     if (!user.isLoggedIn || !user.username) {
@@ -297,6 +342,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 const key = getOrdersStorageKey(user.username);
                 localStorage.setItem(key, JSON.stringify(newOrders));
                 showToast(`Order ${orderId} is now ${status}`, 'success');
+                addNotification(`Order ${orderId} is now ${status}`, 'success', orderId);
                 setTimeout(() => syncOrdersToServer(), 500);
                 return newOrders;
               }
@@ -307,6 +353,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               const key = getOrdersStorageKey(user.username);
               localStorage.setItem(key, JSON.stringify(updatedOrders));
               showToast(`Order ${orderId} is now ${status}`, 'success');
+              addNotification(`Order ${orderId} is now ${status}`, 'success', orderId);
               setTimeout(() => syncOrdersToServer(), 500);
               return updatedOrders;
             });
@@ -329,6 +376,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                       return newOrders;
                     });
                     showToast(`Order ${orderId} is now ${status}`, 'success');
+                    addNotification(`Order ${orderId} is now ${status}`, 'success', orderId);
                   }
                 })
                 .catch(err => console.error('Failed to fetch order:', err));
@@ -341,6 +389,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             const key = getOrdersStorageKey(user.username);
             localStorage.setItem(key, JSON.stringify(updatedOrders));
             showToast(`Order ${orderId} is now ${status}`, 'success');
+            addNotification(`Order ${orderId} is now ${status}`, 'success', orderId);
             setTimeout(() => syncOrdersToServer(), 500);
             return updatedOrders;
           });
@@ -363,6 +412,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               const key = getOrdersStorageKey(user.username);
               localStorage.setItem(key, JSON.stringify(updated));
               showToast(`Order ${newOrder.orderId} placed!`, 'success');
+              addNotification(`New order ${newOrder.orderId} has been placed`, 'success', newOrder.orderId);
               setTimeout(() => syncOrdersToServer(), 500);
               return updated;
             });
@@ -632,6 +682,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setTimeout(() => syncOrdersToServer(), 500);
 
       showToast(`Order ${savedOrder.orderId} placed successfully!`, 'success');
+      addNotification(`Order ${savedOrder.orderId} placed successfully`, 'success', savedOrder.orderId);
       return savedOrder;
       
     } catch (error) {
@@ -774,6 +825,7 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
     setOrders([]);
     setUser({ username: '', isLoggedIn: false });
     setOrdersUpdated(0);
+    setNotifications([]);
     showToast('Logged out successfully', 'info');
   };
 
@@ -799,6 +851,12 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
         searchQuery,
         toast,
         ordersUpdated,
+        notifications,
+        unreadCount,
+        addNotification,
+        markNotificationsRead,
+        removeNotification,
+        clearNotifications,
         setPage,
         setGender,
         setSubCategory,
