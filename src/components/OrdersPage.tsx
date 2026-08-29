@@ -7,6 +7,9 @@ import {
 } from 'lucide-react';
 import { ProductVisual } from './ProductVisual';
 import { OrderStatus, Order, Review } from '../types';
+import { API_SERVER_URL } from '../service/api';
+
+const SERVER_URL = API_SERVER_URL;
 
 // Order status config
 type StatusConfig = {
@@ -271,7 +274,7 @@ export const OrdersPage: React.FC = () => {
   // ✅ SSE connection para sa real-time updates
   useEffect(() => {
     let es: EventSource | null = null;
-    const serverUrl = 'https://c-hub-backend-ijy4.onrender.com';
+    const serverUrl = SERVER_URL;
     
     if (!user.isLoggedIn || !user.username) {
       console.log('⏭️ Skipping SSE - user not logged in');
@@ -291,7 +294,7 @@ export const OrdersPage: React.FC = () => {
       };
       
       // ✅ ORDER UPDATE EVENT - auto-update ng orders
-      es.addEventListener('order_update', (event: MessageEvent) => {
+      es.addEventListener('order-updated', (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data);
           console.log('📦 order_update received (OrdersPage):', data);
@@ -344,7 +347,7 @@ export const OrdersPage: React.FC = () => {
       });
       
       // ✅ NEW ORDER EVENT
-      es.addEventListener('new_order', (event: MessageEvent) => {
+      es.addEventListener('new-order', (event: MessageEvent) => {
         try {
           const newOrder = JSON.parse(event.data) as Order;
           console.log('📦 new_order received (OrdersPage):', newOrder);
@@ -368,7 +371,7 @@ export const OrdersPage: React.FC = () => {
       });
       
       // ✅ ORDER DELETED EVENT
-      es.addEventListener('order_deleted', (event: MessageEvent) => {
+      es.addEventListener('order-deleted', (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data);
           console.log('🗑️ order_deleted received (OrdersPage):', data);
@@ -447,7 +450,7 @@ export const OrdersPage: React.FC = () => {
 
   // ✅ Handle review submission
   const handleSubmitReview = (orderId: string, rating: number, comment: string) => {
-    fetch('https://c-hub-backend-ijy4.onrender.com/api/reviews', {
+    fetch(`${SERVER_URL}/api/reviews`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -510,7 +513,7 @@ export const OrdersPage: React.FC = () => {
       
       // ✅ 4. I-delete sa server
       try {
-        await fetch(`https://c-hub-backend-ijy4.onrender.com/api/orders/${orderId}`, {
+        await fetch(`${SERVER_URL}/api/orders/${orderId}`, {
           method: 'DELETE'
         });
         console.log(`✅ Deleted order ${orderId} from server`);
