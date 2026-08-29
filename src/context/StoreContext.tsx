@@ -44,7 +44,10 @@ interface StoreContextType {
   clearCart: () => void;
   createOrder: (customer: CustomerDetails, discountCode: string, paymentMethod: string) => Promise<Order | null>;
   login: (username: string) => void;
+  signup: (fullName: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
+  customerInfo: CustomerDetails | null;
+  saveCustomerInfo: (info: Partial<CustomerDetails>) => void;
   showToast: (message: string, type?: 'info' | 'success' | 'warning') => void;
   closeSplash: () => void;
   updateOrderStatus: (orderId: string, newStatus: string) => void;
@@ -74,6 +77,10 @@ const getOrdersStorageKey = (username: string) => {
   return `chub_orders_${username.toLowerCase()}`;
 };
 
+const getProfileStorageKey = (username: string) => {
+  return `chub_profile_${username.toLowerCase()}`;
+};
+
 const SYNC_URL = `${API_BASE_URL}/orders/sync`;
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -91,6 +98,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch {
       return { username: '', isLoggedIn: false };
     }
+  });
+
+  const [customerInfo, setCustomerInfo] = useState<CustomerDetails | null>(() => {
+    try {
+      const savedUser = localStorage.getItem('chub_user');
+      const savedProfile = savedUser ? JSON.parse(savedUser) : null;
+      if (savedProfile?.isLoggedIn && savedProfile.username) {
+        const key = getProfileStorageKey(savedProfile.username);
+        const profile = localStorage.getItem(key);
+        if (profile) return JSON.parse(profile) as CustomerDetails;
+      }
+    } catch { /* ignore */ }
+    return null;
   });
 
   const [cart, setCart] = useState<CartItem[]>(() => {
@@ -773,22 +793,44 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
 };
 
   const login = (username: string) => {
-    const formatted = username.charAt(0).toUpperCase() + username.slice(1).toLowerCase();
-    
-    console.log('🔑 Logging in user:', formatted);
-    
-    setUser({ username: formatted, isLoggedIn: true });
-    
+    // Pwede mag-login gamit ang nickname O email address.
+    // Kung email ang input, kunin ang prefix (bago ang @) bilang identity name.
+    const identity = username.includes('@')
+      ? username.split('@')[0]
+      : username;
+
+    const formatted = identity.charAt(0).toUpperCase() + identity.slice(1).toLowerCase();
+    const displayName = formatted || 'User';
+
+    console.log('🔑 Logging in user:', displayName);
+
+    setUser({ username: displayName, isLoggedIn: true });
+
+    // I-load ang saved profile (name/email) para magamit sa checkout
     try {
-      const ordersKey = `chub_orders_${formatted.toLowerCase()}`;
+      const profileKey = getProfileStorageKey(displayName);
+      const savedProfile = localStorage.getItem(profileKey);
+      if (savedProfile) {
+        const parsed = JSON.parse(savedProfile) as CustomerDetails;
+        setCustomerInfo(parsed);
+      } else {
+        setCustomerInfo({ name: displayName, email: '', phone: '', address: '' });
+      }
+    } catch (e) {
+      console.error('Failed to load profile:', e);
+      setCustomerInfo({ name: displayName, email: '', phone: '', address: '' });
+    }
+
+    try {
+      const ordersKey = `chub_orders_${displayName.toLowerCase()}`;
       const savedOrders = localStorage.getItem(ordersKey);
       console.log('📦 Orders key:', ordersKey);
       console.log('📦 Saved orders:', savedOrders);
-      
+
       if (savedOrders) {
         const parsed = JSON.parse(savedOrders);
         setOrders(parsed);
-        console.log(`✅ Loaded ${parsed.length} orders for ${formatted}`);
+        console.log(`✅ Loaded ${parsed.length} orders for ${displayName}`);
         setTimeout(() => syncOrdersToServer(), 500);
       } else {
         setOrders([]);
@@ -798,14 +840,14 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
       console.error('Failed to load orders on login:', e);
       setOrders([]);
     }
-    
+
     try {
-      const cartKey = `chub_cart_${formatted.toLowerCase()}`;
+      const cartKey = `chub_cart_${displayName.toLowerCase()}`;
       const savedCart = localStorage.getItem(cartKey);
       if (savedCart) {
         const parsed = JSON.parse(savedCart);
         setCart(parsed);
-        console.log(`🛒 Loaded ${parsed.length} items for ${formatted}`);
+        console.log(`🛒 Loaded ${parsed.length} items for ${displayName}`);
       } else {
         setCart([]);
       }
@@ -813,11 +855,71 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
       console.error('Failed to load cart on login:', e);
       setCart([]);
     }
-    
+
     setOrdersUpdated(prev => prev + 1);
     console.log('🔄 ordersUpdated set to:', ordersUpdated + 1);
-    
-    showToast(`Welcome back, ${formatted}!`, 'success');
+
+    showToast(`Welcome back, ${displayName}!`, 'success');
+  };
+
+  const signup = async (fullName: string, email: string, password: string) => {
+    // Basic validation - ibabalik ang false kung may error
+    if (!fullName.trim()) {
+      showToast('Please enter your full name', 'warning');
+      return false;
+    }
+    if (!email.trim() || !email.includes('@')) {
+      showToast('Please enter a valid email address', 'warning');
+      return false;
+    }
+    if (password.length < 8) {
+      showToast('Password must be at least 8 characters', 'warning');
+      return false;
+    }
+
+    // Identity name = buong pangalan (para ma-recognize ang iba't ibang users)
+    const formattedName = fullName
+      .trim()
+      .split(/\s+/)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+
+    const profile: CustomerDetails = {
+      name: formattedName,
+      email: email.trim(),
+      phone: '',
+      address: '',
+    };
+
+    // I-save ang profile per-user
+    try {
+      localStorage.setItem(getProfileStorageKey(formattedName), JSON.stringify(profile));
+    } catch (e) {
+      console.error('Failed to save profile:', e);
+    }
+
+    setCustomerInfo(profile);
+    setUser({ username: formattedName, isLoggedIn: true });
+
+    setOrders([]);
+    setCart([]);
+
+    showToast(`Account created. Welcome, ${formattedName}!`, 'success');
+    return true;
+  };
+
+  const saveCustomerInfo = (info: Partial<CustomerDetails>) => {
+    setCustomerInfo(prev => {
+      const updated = { ...(prev || { name: user.username || '', email: '', phone: '', address: '' }), ...info } as CustomerDetails;
+      try {
+        if (user.isLoggedIn && user.username) {
+          localStorage.setItem(getProfileStorageKey(user.username), JSON.stringify(updated));
+        }
+      } catch (e) {
+        console.error('Failed to save customer info:', e);
+      }
+      return updated;
+    });
   };
 
   const logout = () => {
@@ -868,7 +970,10 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
         clearCart,
         createOrder,
         login,
+        signup,
         logout,
+        customerInfo,
+        saveCustomerInfo,
         showToast,
         closeSplash,
         updateOrderStatus,

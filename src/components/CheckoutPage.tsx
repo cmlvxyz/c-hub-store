@@ -5,13 +5,13 @@ import { ShieldCheck, Truck, ArrowLeft, Tag, Check, CreditCard, Banknote, Smartp
 import { ProductVisual } from './ProductVisual';
 
 export const CheckoutPage: React.FC = () => {
-  const { cart, createOrder, setPage, showToast } = useStore();
+  const { cart, createOrder, setPage, showToast, customerInfo, saveCustomerInfo } = useStore();
 
   const [customer, setCustomer] = useState<CustomerDetails>({
-    name: '',
-    email: '',
-    phone: '',
-    address: ''
+    name: customerInfo?.name || '',
+    email: customerInfo?.email || '',
+    phone: customerInfo?.phone || '',
+    address: customerInfo?.address || ''
   });
 
   const [discountCode, setDiscountCode] = useState('');
@@ -256,7 +256,11 @@ export const CheckoutPage: React.FC = () => {
                   required
                   placeholder="e.g. Juan Dela Cruz"
                   value={customer.name}
-                  onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setCustomer({ ...customer, name: v });
+                    saveCustomerInfo({ name: v });
+                  }}
                   className="w-full px-4 py-3 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-stone-900 dark:text-white"
                 />
               </div>
@@ -270,7 +274,11 @@ export const CheckoutPage: React.FC = () => {
                   required
                   placeholder="juan@example.com"
                   value={customer.email}
-                  onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setCustomer({ ...customer, email: v });
+                    saveCustomerInfo({ email: v });
+                  }}
                   className="w-full px-4 py-3 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-stone-900 dark:text-white"
                 />
               </div>
@@ -284,7 +292,11 @@ export const CheckoutPage: React.FC = () => {
                   required
                   placeholder="0917 123 4567"
                   value={customer.phone}
-                  onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setCustomer({ ...customer, phone: v });
+                    saveCustomerInfo({ phone: v });
+                  }}
                   className="w-full px-4 py-3 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-stone-900 dark:text-white"
                 />
               </div>
@@ -298,7 +310,11 @@ export const CheckoutPage: React.FC = () => {
                   rows={3}
                   placeholder="House/Unit No., Street, Barangay, City, Province, Postal Code"
                   value={customer.address}
-                  onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setCustomer({ ...customer, address: v });
+                    saveCustomerInfo({ address: v });
+                  }}
                   className="w-full px-4 py-3 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-stone-900 dark:text-white"
                 />
               </div>
