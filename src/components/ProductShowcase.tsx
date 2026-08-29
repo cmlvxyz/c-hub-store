@@ -335,7 +335,7 @@ export const ProductShowcase: React.FC = () => {
           </div>
 
           {/* ===== CENTER COLUMN: Product Image ===== */}
-          <div className="lg:col-span-5 flex flex-col items-center justify-center relative py-2 -top-10">
+          <div className="lg:col-span-5 flex flex-col items-center justify-center relative py-2 lg:-top-10">
             
             <div className="relative w-full max-w-[380px] sm:max-w-[440px] flex flex-col items-center justify-center">
               
@@ -424,7 +424,7 @@ export const ProductShowcase: React.FC = () => {
           <div className="lg:col-span-3 space-y-7 flex flex-col justify-center lg:items-end text-left lg:text-right z-10">
             
             {/* Price */}
-            <div className="space-y-1 relative right-15 -top-40">
+            <div className="space-y-1 relative lg:right-15 lg:-top-40">
               <div className={`text-3xl sm:text-4xl lg:text-[40px] font-black tracking-tight font-mono transition-colors duration-500 ${textColorClass}`}>
                 #{basePriceObj.price.toLocaleString()}
               </div>
@@ -434,7 +434,7 @@ export const ProductShowcase: React.FC = () => {
             </div>
 
             {/* Size */}
-            <div className="space-y-3 relative right-15 -top-35">
+            <div className="space-y-3 relative lg:right-15 lg:-top-35">
               <p className={`text-xs font-bold tracking-tight capitalize transition-colors duration-500 ${textColorClass}`}>
                 Choose your size
               </p>

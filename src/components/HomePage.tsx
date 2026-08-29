@@ -87,7 +87,7 @@ export const HomePage: React.FC = () => {
             </div>
 
             {/* Right Hero - Hang Tags & Featured Piece */}
-            <div className="lg:col-span-5 flex items-center justify-center relative h-[360px] -left-20">
+            <div className="lg:col-span-5 flex items-center justify-center relative h-[360px] lg:-left-20">
               
               {/* Hang Tag 1 - Navy */}
               <motion.div 
