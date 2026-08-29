@@ -47,8 +47,8 @@ export const Header: React.FC = () => {
           </span>
         </button>
 
-        {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center gap-2 lg:gap-3 text-sm font-semibold p-1.5 rounded-full bg-stone-100/80 dark:bg-stone-900/60 backdrop-blur-md border border-stone-200/50 dark:border-stone-800/50 shadow-inner">
+        {/* Desktop Navigation Links - Glass Morphism */}
+        <nav className="hidden md:flex items-center gap-2 lg:gap-3 text-sm font-semibold p-1.5 rounded-full backdrop-blur-xl bg-white/40 dark:bg-black/40 border border-white/30 dark:border-white/10 shadow-lg shadow-black/5">
           {navLinks.map((link) => (
             <button
               key={link.page}
@@ -56,10 +56,10 @@ export const Header: React.FC = () => {
               onClick={() => handleNavClick(link.page)}
               className={`py-2 px-5 rounded-full transition-all duration-200 tracking-wide text-xs sm:text-sm font-bold cursor-pointer ${
                 isActive(link.page)
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 scale-102'
+                  ? 'bg-indigo-500 text-white shadow-md shadow-indigo-600/30 scale-102'
                   : isDarkTheme
-                  ? 'text-white/80 hover:text-white hover:bg-white/10'
-                  : 'text-stone-700 hover:text-stone-950 hover:bg-stone-200/60'
+                  ? 'text-white/80 hover:text-white hover:bg-white/15'
+                  : 'text-stone-700 hover:text-stone-950 hover:bg-white/50'
               }`}
             >
               {link.label}

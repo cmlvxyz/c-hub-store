@@ -30,3 +30,150 @@
 .animate-fadeIn {
   animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* index.css - Add at the end */
+
+/* Mobile Responsive Breakpoints */
+@layer utilities {
+  /* Extra small devices (phones, 320px and up) */
+  @media (max-width: 375px) {
+    .login-container {
+      padding-left: 0.75rem;
+      padding-right: 0.75rem;
+    }
+    .login-card {
+      padding: 1.25rem;
+      border-radius: 1.25rem;
+    }
+  }
+
+  /* Small devices (phones, 376px to 480px) */
+  @media (min-width: 376px) and (max-width: 480px) {
+    .login-container {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+  }
+
+  /* Show on very small screens only */
+  @media (max-width: 380px) {
+    .hide-very-small {
+      display: none !important;
+    }
+    .text-very-small {
+      font-size: 0.625rem !important;
+    }
+    .padding-very-small {
+      padding: 0.5rem !important;
+    }
+  }
+
+  /* Custom breakpoint for extra small */
+  @media (min-width: 380px) {
+    .xs\:inline {
+      display: inline !important;
+    }
+  }
+
+  /* Safe area padding for modern mobile devices */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pl-safe {
+    padding-left: env(safe-area-inset-left);
+  }
+  .pr-safe {
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  /* Fallback for browsers that don't support safe-area-inset */
+  @supports not (padding-top: env(safe-area-inset-top)) {
+    .pt-safe {
+      padding-top: 0px;
+    }
+    .pb-safe {
+      padding-bottom: 0px;
+    }
+  }
+}
+
+/* Mobile-specific touch improvements */
+@media (max-width: 640px) {
+  /* Increase tap targets */
+  button, 
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Better touch feedback */
+  .touch-feedback:active {
+    transform: scale(0.96);
+    transition: transform 0.1s;
+  }
+  
+  /* Prevent zoom on input focus on iOS */
+  input {
+    font-size: 16px !important;
+  }
+  
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Landscape phone support */
+@media (max-width: 768px) and (orientation: landscape) {
+  .login-page {
+    min-height: 100vh;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  .login-card {
+    padding: 1rem 1.5rem;
+    max-width: 420px;
+  }
+  .login-brand-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  .login-title {
+    font-size: 1.25rem;
+  }
+  .login-subtitle {
+    font-size: 0.7rem;
+  }
+}
+
+/* index.css - Add safe area support for mobile notches */
+
+@layer utilities {
+  /* Safe area padding for modern mobile devices */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pl-safe {
+    padding-left: env(safe-area-inset-left);
+  }
+  .pr-safe {
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  /* Fallback for browsers that don't support safe-area-inset */
+  @supports not (padding-top: env(safe-area-inset-top)) {
+    .pt-safe {
+      padding-top: 0px;
+    }
+    .pb-safe {
+      padding-bottom: 0px;
+    }
+  }
+}

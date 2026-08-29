@@ -138,98 +138,81 @@ export const ProductShowcase: React.FC = () => {
   const textColorClass = isDarkTheme ? 'text-white' : 'text-stone-900';
   const subTextColorClass = isDarkTheme ? 'text-white/70' : 'text-stone-700';
 
-  // ANIMATION LOGIC: 
-  // - Next product starts SMALL (from thumbnail position) then GROWS to center
-  // - Current product EXITS (shrinks and fades out)
-  const slideVariants: Variants = {
-    enter: (dir: number) => {
-      if (dir > 0) {
-        // NEXT PRODUCT: Starts small from bottom-right (like thumbnail)
-        return {
-          x: 'min(38vw, 480px)',
-          y: 'min(34vh, 270px)',
-          scale: 0.15,        // Magsisimula sa maliit (parang thumbnail)
-          opacity: 0,
-          rotate: 12,
-          zIndex: 30
-        };
-      }
+  // ANIMATION LOGIC - Pure diagonal slide, NO ZOOM
+const slideVariants: Variants = {
+  enter: (dir: number) => {
+    if (dir > 0) {
+      // NEXT PRODUCT: Galing sa bottom-right (↘) - pure slide lang
       return {
-        x: -380,
-        y: -30,
-        scale: 0.65,
+        x: 400,
+        y: 300,
         opacity: 0,
-        rotate: -12,
         zIndex: 30
       };
-    },
-    center: {
-      x: 0,
-      y: 0,
-      opacity: 1,
-      scale: 1,              // Lumalaki papuntang full size
-      rotate: 0,
-      zIndex: 20,
-      transition: {
-        duration: 2.5,       // Mabagal na paglaki (2.5 seconds)
-        ease: [0.22, 1, 0.36, 1]
-      }
-    },
-    exit: (dir: number) => {
-      if (dir > 0) {
-        // CURRENT PRODUCT: Lumabas (shrink and fade)
-        return {
-          x: -380,
-          y: -20,
-          opacity: 0,
-          scale: 0.65,
-          rotate: -12,
-          zIndex: 10,
-          transition: {
-            duration: 1.5,
-            ease: [0.22, 1, 0.36, 1]
-          }
-        };
-      }
+    }
+    return {
+      x: -400,
+      y: -300,
+      opacity: 0,
+      zIndex: 30
+    };
+  },
+  center: {
+    x: 0,
+    y: 0,
+    opacity: 1,
+    zIndex: 20,
+    transition: {
+      duration: 0.8,
+      ease: [0.22, 1, 0.36, 1]
+    }
+  },
+  exit: (dir: number) => {
+    if (dir > 0) {
+      // CURRENT PRODUCT: Lumabas pa-top-left (↖) - pure slide lang
       return {
-        x: 'min(38vw, 480px)',
-        y: 'min(34vh, 270px)',
+        x: -350,
+        y: -250,
         opacity: 0,
-        scale: 0.15,
-        rotate: 12,
         zIndex: 10,
         transition: {
-          duration: 1.5,
+          duration: 0.6,
           ease: [0.22, 1, 0.36, 1]
         }
       };
     }
-  };
+    return {
+      x: 350,
+      y: 250,
+      opacity: 0,
+      zIndex: 10,
+      transition: {
+        duration: 0.6,
+        ease: [0.22, 1, 0.36, 1]
+      }
+    };
+  }
+};
 
   return (
     <div className="w-full relative transition-colors duration-700 py-3 sm:py-6 px-4 sm:px-8">
       <div className="max-w-[1360px] mx-auto min-h-[640px] flex flex-col justify-between">
         
-        {/* Top Product Category Tabs */}
-        <div className="flex flex-wrap items-center justify-start gap-2 pb-3 border-black/5 dark:border-white/10 relative z-20 mt-10 ml-10">
-          {categoryConfig.subCategories.map((sub) => {
-            const label = categoryConfig.subCategoryLabels[sub] || sub;
-            const isSelected = activeTab === sub;
+        {/* Top Product Category Tabs - Clothes, Pants, Shoes, Underwear, Accessories */}
+        <div className="flex flex-wrap items-center justify-start gap-2 pb-3 border-black/5 dark:border-white/10 relative z-20 mt-6 ml-6 lg:ml-10">
+          {(['clothes', 'pants', 'shoes', 'underwear', 'accessories'] as PageType[]).map((cat) => {
+            const isSelected = page === cat;
+            const label = cat.charAt(0).toUpperCase() + cat.slice(1);
             return (
               <button
-                key={sub}
-                onClick={() => {
-                  setActiveTab(sub);
-                  setSubCategory(sub);
-                }}
-                className={`px-6 py-2 rounded-full text-xs sm:text-sm font-bold tracking-wide capitalize transition-all duration-300 cursor-pointer ${
+                key={cat}
+                onClick={() => setPage(cat)}
+                className={`px-4 sm:px-6 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs md:text-sm font-bold tracking-wide capitalize transition-all duration-300 cursor-pointer ${
                   isSelected
-                    ? isDarkTheme
-                      ? 'bg-white text-stone-950 shadow-md scale-105'
-                      : 'bg-stone-900 text-white shadow-md scale-105'
+                    ? 'bg-indigo-500/80 backdrop-blur-sm text-white shadow-md shadow-indigo-500/25 border border-indigo-400/30 scale-105'
                     : isDarkTheme
-                    ? 'bg-white/10 text-white/80 hover:bg-white/20'
-                    : 'bg-stone-200/80 text-stone-800 hover:bg-stone-300'
+                    ? 'bg-white/10 backdrop-blur-sm text-white/80 hover:text-white hover:bg-white/20 border border-white/5'
+                    : 'bg-white/40 backdrop-blur-sm text-stone-700 hover:text-stone-900 hover:bg-white/60 border border-white/20'
                 }`}
               >
                 {label}
@@ -265,51 +248,35 @@ export const ProductShowcase: React.FC = () => {
               </p>
             </div>
 
-            {/* ===== CATEGORY SWITCHER SHORTCUTS ===== */}
-            <div className="relative left-8 top-20 flex flex-wrap items-center gap-0.5 text-xs font-semibold max-w-[220px]">
-              {(['clothes', 'shoes', 'pants'] as PageType[]).map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setPage(cat)}
-                  className={`px-2.5 py-1 rounded-full capitalize transition-all duration-300 ${
-                    page === cat
-                      ? isDarkTheme
-                        ? `border border-[${activeProduct?.bgColor || '#6366f1'}] text-[${activeProduct?.bgColor || '#6366f1'}] scale-105`
-                        : `border border-[${activeProduct?.bgColor || '#6366f1'}] text-[${activeProduct?.bgColor || '#6366f1'}] scale-105`
-                      : isDarkTheme
-                      ? 'border border-transparent text-white/60 hover:text-white'
-                      : 'border border-transparent text-stone-600 hover:text-stone-900'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-              
-              {/* Second row: underwear and accessories */}
-              <div className="flex items-center gap-0.5 w-full">
-                {(['underwear', 'accessories'] as PageType[]).map((cat) => (
+            {/* ===== SUB CATEGORY SWITCHER - Glass Effect Pills ===== */}
+            <div className="relative left-6 lg:left-8 top-12 sm:top-16 flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs font-semibold">
+              {categoryConfig.subCategories.map((sub) => {
+                const label = categoryConfig.subCategoryLabels[sub] || sub;
+                const isSelected = activeTab === sub;
+                return (
                   <button
-                    key={cat}
-                    onClick={() => setPage(cat)}
-                    className={`px-2.5 py-1 rounded-full capitalize transition-all duration-300 ${
-                      page === cat
-                        ? isDarkTheme
-                          ? `border border-[${activeProduct?.bgColor || '#6366f1'}] text-[${activeProduct?.bgColor || '#6366f1'}] scale-105`
-                          : `border border-[${activeProduct?.bgColor || '#6366f1'}] text-[${activeProduct?.bgColor || '#6366f1'}] scale-105`
+                    key={sub}
+                    onClick={() => {
+                      setActiveTab(sub);
+                      setSubCategory(sub);
+                    }}
+                    className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-bold capitalize transition-all duration-300 ${
+                      isSelected
+                        ? 'bg-indigo-500/80 backdrop-blur-sm text-white shadow-md shadow-indigo-500/25 border border-indigo-400/30 scale-105'
                         : isDarkTheme
-                        ? 'border border-transparent text-white/60 hover:text-white'
-                        : 'border border-transparent text-stone-600 hover:text-stone-900'
+                        ? 'bg-white/10 backdrop-blur-sm text-white/80 hover:text-white hover:bg-white/20 border border-white/5'
+                        : 'bg-white/40 backdrop-blur-sm text-stone-700 hover:text-stone-900 hover:bg-white/60 border border-white/20'
                     }`}
                   >
-                    {cat}
+                    {label}
                   </button>
-                ))}
-              </div>
+                );
+              })}
             </div>
 
-            {/* ===== GENDER SELECTION ===== */}
+            {/* ===== GENDER SELECTION - Glass Effect ===== */}
             <div className="relative left-10 top-24 pt-2 space-y-2">
-              <div className="flex flex-wrap gap-4 items-center">
+              <div className="flex flex-wrap gap-2 items-center">
                 {(['men', 'women', 'boys', 'girls'] as GenderType[]).map((g) => {
                   const isCurrentGender = gender === g;
                   return (
@@ -317,14 +284,12 @@ export const ProductShowcase: React.FC = () => {
                       key={g}
                       id={`gender-select-${g}`}
                       onClick={() => setGender(g)}
-                      className={`text-sm font-bold capitalize transition-all duration-300 cursor-pointer ${
+                      className={`text-sm font-bold capitalize transition-all duration-300 cursor-pointer px-3 py-1 rounded-full ${
                         isCurrentGender
-                          ? isDarkTheme
-                            ? 'text-white underline underline-offset-8 decoration-2 scale-105'
-                            : 'text-stone-950 underline underline-offset-8 decoration-2 scale-105'
+                          ? 'bg-indigo-500/80 backdrop-blur-sm text-white shadow-md shadow-indigo-500/20 border border-indigo-400/30 scale-105'
                           : isDarkTheme
-                          ? 'text-white/50 hover:text-white/80'
-                          : 'text-stone-500 hover:text-stone-900'
+                          ? 'bg-white/10 backdrop-blur-sm text-white/70 hover:text-white hover:bg-white/20'
+                          : 'bg-white/40 backdrop-blur-sm text-stone-700 hover:text-stone-900 hover:bg-white/60'
                       }`}
                     >
                       {g}
