@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { PageType, GenderType, CartItem, Order, User, CustomerDetails } from '../types';
 import { PRODUCTS_CONFIG } from '../data/products';
+import { API_BASE_URL, API_SERVER_URL } from '../service/api';
 
 interface StoreContextType {
   page: PageType;
@@ -58,7 +59,7 @@ const getOrdersStorageKey = (username: string) => {
   return `chub_orders_${username.toLowerCase()}`;
 };
 
-const SYNC_URL = 'http://localhost:3013/api/orders/sync';
+const SYNC_URL = `${API_BASE_URL}/orders/sync`;
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [page, setPageState] = useState<PageType>('home');
@@ -257,7 +258,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     let es: EventSource | null = null;
-    const serverUrl = 'https://c-hub-backend-ijy4.onrender.com';
+    const serverUrl = API_SERVER_URL;
     
     if (!user.isLoggedIn || !user.username) {
       console.log('⏭️ Skipping SSE - user not logged in');
@@ -276,7 +277,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.warn('⚠️ SSE error:', error);
       };
       
-      es.addEventListener('order_update', (event: MessageEvent) => {
+      es.addEventListener('order-updated', (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data);
           console.log('📦 order_update received:', data);
@@ -348,7 +349,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       });
       
-      es.addEventListener('new_order', (event: MessageEvent) => {
+      es.addEventListener('new-order', (event: MessageEvent) => {
         try {
           const newOrder = JSON.parse(event.data) as Order;
           console.log('📦 new_order received:', newOrder);
@@ -549,6 +550,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       image: item.image || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23e2e8f0"/%3E%3Ctext x="50" y="50" text-anchor="middle" dy=".3em" fill="%2394a3b8" font-size="12"%3EImage%3C/text%3E%3C/svg%3E'
     }));
 
+    // ✅ Local status mirror ng backend logic: COD -> To Ship | Online -> To Pay
+    const payMethod = (paymentMethod || '').toLowerCase();
+    const localStatus: Order['status'] =
+      payMethod.includes('cod') || payMethod.includes('cash on delivery')
+        ? 'To Ship'
+        : 'To Pay';
+
     const newOrder: Order = {
       orderId: 'CHUB-' + Math.floor(100000 + Math.random() * 900000),
       date: new Date().toLocaleDateString('en-US', {
@@ -564,17 +572,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       discountCode: cleanCode,
       total,
       payment: paymentMethod,
-      status: 'To Ship'
+      status: localStatus
     };
 
     try {
       console.log('📦 Sending order to backend...');
       console.log('📦 Order data:', JSON.stringify(newOrder, null, 2));
-      
-      const response = await fetch('http://localhost:3013/api/orders', {
+
+      // ✅ Backend ang source of truth ng status -> huwag magpadala ng status
+      const { status: _omittedStatus, ...orderPayload } = newOrder;
+
+      const response = await fetch(`${API_BASE_URL}/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newOrder)
+        body: JSON.stringify(orderPayload)
       });
       
       console.log('📡 Response status:', response.status);
@@ -587,10 +598,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       const data = await response.json() as { success: boolean; order: Order };
       console.log('✅ Order saved:', data);
+      const savedOrder = data.order || newOrder;
 
       if (user.isLoggedIn && user.username) {
         setOrders(prev => {
-          const updated = [newOrder, ...prev];
+          const updated = [savedOrder, ...prev.filter(o => o.orderId !== savedOrder.orderId)];
           const key = getOrdersStorageKey(user.username);
           localStorage.setItem(key, JSON.stringify(updated));
           return updated;
@@ -599,8 +611,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       setTimeout(() => syncOrdersToServer(), 500);
 
-      showToast(`Order ${newOrder.orderId} placed successfully!`, 'success');
-      return newOrder;
+      showToast(`Order ${savedOrder.orderId} placed successfully!`, 'success');
+      return savedOrder;
       
     } catch (error) {
       console.error('❌ Failed to save order:', error);
@@ -617,13 +629,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:3013/api/orders');
+      const response = await fetch(`${API_BASE_URL}/orders`);
       if (response.ok) {
         const serverOrders = await response.json() as Order[];
         
+        const usernameLower = user.username.toLowerCase().trim();
         const userOrders = serverOrders.filter((order: Order) => {
-          const customerName = order.customer?.name?.toLowerCase().trim() || '';
-          return customerName === user.username.toLowerCase().trim();
+          const customerName = (order.customer?.name || '').toLowerCase().trim();
+          const customerEmail = (order.customer?.email || '').toLowerCase().trim();
+          const emailLocal = customerEmail.split('@')[0];
+          return customerName === usernameLower ||
+            customerName.includes(usernameLower) ||
+            emailLocal.includes(usernameLower);
         });
         
         setOrders(prev => {
@@ -650,9 +667,39 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const updateOrderStatus = async (orderId: string, newStatus: string) => {
-    showToast('Order status updates are automatic via the admin panel.', 'info');
-  };
+const updateOrderStatus = async (orderId: string, newStatus: string) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus })
+    });
+
+    if (!response.ok) {
+      console.warn('⚠️ Failed to update order status on server:', response.status);
+      showToast('Failed to update status. Please try again.', 'warning');
+      return;
+    }
+
+    const data = await response.json() as { success: boolean; order: Order };
+    const serverStatus = (data.order?.status || newStatus) as Order['status'];
+
+    if (user.isLoggedIn && user.username) {
+      setOrders(prev => {
+        const updated = prev.map(o =>
+          o.orderId === orderId ? { ...o, ...data.order, status: serverStatus } : o
+        );
+        const key = getOrdersStorageKey(user.username);
+        localStorage.setItem(key, JSON.stringify(updated));
+        return updated;
+      });
+      showToast(`Order ${orderId} is now ${serverStatus}`, 'success');
+    }
+  } catch (error) {
+    console.error('❌ Failed to update order status:', error);
+    showToast('Failed to update status. Please try again.', 'warning');
+  }
+};
 
   const login = (username: string) => {
     const formatted = username.charAt(0).toUpperCase() + username.slice(1).toLowerCase();
