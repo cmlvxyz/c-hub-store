@@ -44,6 +44,7 @@ interface StoreContextType {
   clearCart: () => void;
   createOrder: (customer: CustomerDetails, discountCode: string, paymentMethod: string) => Promise<Order | null>;
   login: (username: string) => void;
+  completeAuth: (fullName: string, email: string, phone: string, address: string, username: string) => void;
   signup: (fullName: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
   customerInfo: CustomerDetails | null;
@@ -908,6 +909,29 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
     return true;
   };
 
+  const completeAuth = (fullName: string, email: string, phone: string, address: string, username: string) => {
+    // I-save muna ang delivery info sa profile bago mag-login,
+    // para siguradong naka-save ito under sa username ng user.
+    const identity = username.includes('@') ? username.split('@')[0] : username;
+    const displayName = identity.charAt(0).toUpperCase() + identity.slice(1).toLowerCase() || 'User';
+
+    const profile: CustomerDetails = {
+      name: fullName.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
+      address: address.trim(),
+    };
+
+    try {
+      localStorage.setItem(getProfileStorageKey(displayName), JSON.stringify(profile));
+    } catch (e) {
+      console.error('Failed to save profile:', e);
+    }
+
+    setCustomerInfo(profile);
+    login(displayName);
+  };
+
   const saveCustomerInfo = (info: Partial<CustomerDetails>) => {
     setCustomerInfo(prev => {
       const updated = { ...(prev || { name: user.username || '', email: '', phone: '', address: '' }), ...info } as CustomerDetails;
@@ -970,6 +994,7 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
         clearCart,
         createOrder,
         login,
+        completeAuth,
         signup,
         logout,
         customerInfo,
