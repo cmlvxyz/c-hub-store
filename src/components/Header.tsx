@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
-import { ShoppingCart, Bell, Menu, X, LogOut, Package, ChevronDown, Box, Sparkles } from 'lucide-react';
+import { ShoppingCart, Bell, Menu, X, LogOut, Package, ChevronDown, Box } from 'lucide-react';
 import { PageType } from '../types';
 
 export const Header: React.FC = () => {
   const { page, setPage, cart, orders, user, logout, isDarkTheme } = useStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   const totalCartCount = cart.reduce((total, item) => total + item.qty, 0);
 
@@ -15,6 +16,21 @@ export const Header: React.FC = () => {
     { label: 'Shop', page: 'shop' },
     ...(user.isLoggedIn && orders.length > 0 ? [{ label: 'Orders', page: 'orders' as PageType }] : [])
   ];
+
+  // Handle notification click
+  const handleNotificationClick = () => {
+    setNotificationCount(0);
+    // Optional: Show notification panel or toast
+  };
+
+  // Simulate receiving notifications
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNotificationCount(prev => prev + 1);
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const handleNavClick = (targetPage: PageType) => {
     setPage(targetPage);
@@ -148,13 +164,18 @@ export const Header: React.FC = () => {
 
               <button
                 id="navNotificationBtn"
-                onClick={() => handleNavClick('shop')}
+                onClick={handleNotificationClick}
                 className={`relative p-2 rounded-full transition-transform active:scale-95 cursor-pointer ${
                   isDarkTheme ? 'text-white hover:text-indigo-300' : 'text-stone-900 hover:text-indigo-600 hover:bg-stone-100'
                 }`}
+                aria-label="Notifications"
               >
                 <Bell className="w-5 h-5 stroke-[2.2]" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white" />
+                {notificationCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full ring-2 ring-white dark:ring-stone-900">
+                    {notificationCount > 9 ? '9+' : notificationCount}
+                  </span>
+                )}
               </button>
             </div>
           ) : (
