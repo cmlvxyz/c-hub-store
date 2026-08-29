@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { StoreProvider, useStore } from './context/StoreContext';
 import { Header } from './components/Header';
@@ -15,8 +15,9 @@ import { FAQPage, ShippingPage, ReturnsPage, SizeGuidePage, ContactPage } from '
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
-  const { page, activeBgColor, isDarkTheme, toast, user, splashShown } = useStore();
+  const { page, activeBgColor, isDarkTheme, toast, user, splashShown, setPage } = useStore();
   const [hasRenderedAfterSplash, setHasRenderedAfterSplash] = useState(false);
+  const routedAfterSplash = useRef(false);
 
   useEffect(() => {
     if (splashShown) {
@@ -25,6 +26,17 @@ const MainLayout: React.FC = () => {
       setHasRenderedAfterSplash(false);
     }
   }, [splashShown]);
+
+  // Pagkatapos ng splash: kung hindi pa naka-login, i-land sa Login page (minsan lang).
+  // Kung naka-login na, deretso sa Home.
+  useEffect(() => {
+    if (splashShown && !routedAfterSplash.current) {
+      routedAfterSplash.current = true;
+      if (!user.isLoggedIn) {
+        setPage('login');
+      }
+    }
+  }, [splashShown, user.isLoggedIn, setPage]);
 
   const isProductShowcase = ['clothes', 'shoes', 'pants', 'underwear', 'accessories'].includes(page);
 

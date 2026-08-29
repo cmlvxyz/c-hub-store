@@ -39,7 +39,7 @@ export const LoginPage: React.FC = () => {
     }
 
     login(username);
-    setPage('shop');
+    setPage('home');
   };
 
   // If logged in, show the right side (Welcome)
