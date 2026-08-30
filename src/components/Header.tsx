@@ -74,8 +74,8 @@ export const Header: React.FC = () => {
           onClick={() => handleNavClick('home')}
           className={`flex items-center gap-2.5 font-black tracking-tight text-xl sm:text-2xl transition-transform hover:scale-105 select-none cursor-pointer ${navColorClass}`}
         >
-          <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-500/25">
-            <Box className="w-5 h-5 stroke-[2.5]" />
+          <div className="w-9 h-9 flex items-center justify-center">
+            <Box className="w-6 h-6 stroke-[2.5] text-indigo-600" />
           </div>
           <span className="font-extrabold tracking-tight font-serif">
             C<span className="text-indigo-600 font-sans">-</span>HUB

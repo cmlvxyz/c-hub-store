@@ -83,8 +83,8 @@ export const Footer: React.FC = () => {
           {/* Brand Col */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 font-black text-2xl tracking-wide" style={{ color: isDark ? '#ffffff' : '#1a1a1a' }}>
-              <div className="w-8 h-8 rounded-lg bg-indigo-500 text-white flex items-center justify-center">
-                <Box className="w-5 h-5 stroke-[2.5]" />
+              <div className="w-8 h-8 flex items-center justify-center">
+                <Box className="w-5 h-5 stroke-[2.5] text-indigo-600" />
               </div>
               <span>C-HUB</span>
             </div>
