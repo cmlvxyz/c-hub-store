@@ -29,7 +29,7 @@ export const HomePage: React.FC = () => {
 
       {/* ===== HERO SECTION ===== */}
       <section className="max-w-[1360px] mx-auto px-4 sm:px-8">
-        <div className="relative rounded-[2.5rem] bg-gradient-to-br from-white via-indigo-50/40 to-stone-100 text-stone-900 overflow-hidden p-8 sm:p-12 lg:p-16">
+        <div className="relative rounded-[2.5rem] bg-gradient-to-br from-white via-indigo-50/40 to-stone-50 text-stone-900 overflow-hidden p-8 sm:p-12 lg:p-16">
           
           {/* Ambient Glow */}
           <div className="absolute -top-24 -right-24 w-96 h-96 bg-indigo-200/40 rounded-full blur-3xl pointer-events-none" />

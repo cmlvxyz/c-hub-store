@@ -88,6 +88,13 @@ const MainLayout: React.FC = () => {
       className="min-h-screen flex flex-col justify-between overflow-x-hidden relative"
       style={{
         ...(containerBgStyle || { backgroundColor: '#ffffff' }),
+        ...(!containerBgStyle && {
+          backgroundImage: `url('/c-hub.png')`,
+          backgroundSize: '100% 100%',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          backgroundAttachment: 'fixed',
+        }),
         transition: 'background-color 0.65s cubic-bezier(0.4, 0, 0.2, 1), color 0.5s ease'
       }}
     >

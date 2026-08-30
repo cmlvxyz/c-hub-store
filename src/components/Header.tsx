@@ -75,7 +75,7 @@ export const Header: React.FC = () => {
           className={`flex items-center gap-2.5 font-black tracking-tight text-xl sm:text-2xl transition-transform hover:scale-105 select-none cursor-pointer ${navColorClass}`}
         >
           <div className="w-9 h-9 flex items-center justify-center">
-            <Box className="w-6 h-6 stroke-[2.5] text-indigo-600" />
+            <Box className="w-10 h-10 stroke-[2.5] text-indigo-500" />
           </div>
           <span className="font-extrabold tracking-tight font-serif">
             C<span className="text-indigo-600 font-sans">-</span>HUB

@@ -4,7 +4,7 @@ import { PageType, GenderType } from '../types';
 import { Box } from 'lucide-react';
 
 export const Footer: React.FC = () => {
-  const { setPage, setGender, showToast, activeBgColor, activeTextColor } = useStore();
+  const { page, setPage, setGender, showToast, activeBgColor, activeTextColor } = useStore();
   const [email, setEmail] = useState('');
 
   const handleSubscribe = (e: React.FormEvent) => {
@@ -66,12 +66,19 @@ export const Footer: React.FC = () => {
     activeBgColor === '#572A34';
 
   const footerBg = activeBgColor || '#111111';
+  const isShowcase = ['clothes', 'shoes', 'pants', 'underwear', 'accessories'].includes(page);
 
   return (
     <footer 
-      className="w-full pt-16 pb-12 mt-16 border-t transition-colors duration-500"
+      className="w-full pt-16 pb-12 mt-16 transition-colors duration-500"
       style={{ 
         backgroundColor: footerBg,
+        ...(!isShowcase && {
+          backgroundImage: `url('/c-hub.png')`,
+          backgroundSize: '100% 100%',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }),
         borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
       }}
     >
