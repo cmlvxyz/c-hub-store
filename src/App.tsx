@@ -161,7 +161,7 @@ const MainLayout: React.FC = () => {
             </main>
           </div>
 
-          <Footer />
+          {page !== 'login' && <Footer />}
         </motion.div>
       ) : (
         <div className="opacity-0 pointer-events-none h-screen" />

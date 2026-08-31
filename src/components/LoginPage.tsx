@@ -95,7 +95,7 @@ export const LoginPage: React.FC = () => {
   // ---------- Logged In State ----------
   if (user.isLoggedIn) {
     return (
-      <div className="w-full max-w-[480px] mx-auto px-4 py-12 animate-fadeIn">
+      <div className="w-full max-w-[720px] mx-auto px-4 py-12 animate-fadeIn">
         <div className="p-8 sm:p-10 rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xl space-y-6">
           <div className="text-center space-y-2">
             <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-3xl shadow-inner">
@@ -141,7 +141,7 @@ export const LoginPage: React.FC = () => {
   // ---------- Step 2: Login (Username + Password) ----------
   if (step === 2) {
     return (
-      <div className="w-full max-w-[480px] mx-auto px-4 py-12 animate-fadeIn">
+      <div className="w-full max-w-[720px] mx-auto px-4 py-12 animate-fadeIn">
         <div className="p-8 sm:p-10 rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xl space-y-6">
           <div className="text-center space-y-2">
             <div className="w-14 h-14 mx-auto rounded-2xl bg-indigo-500 text-white flex items-center justify-center text-2xl font-bold shadow-md">
@@ -234,7 +234,7 @@ export const LoginPage: React.FC = () => {
 
   // ---------- Step 1: Sign In (Delivery Information) ----------
   return (
-    <div className="w-full max-w-[480px] mx-auto px-4 py-12 animate-fadeIn">
+    <div className="w-full max-w-[720px] mx-auto px-4 py-12 animate-fadeIn">
       <div className="p-8 sm:p-10 rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xl space-y-6">
         <div className="text-center space-y-2">
           <div className="w-14 h-14 mx-auto rounded-2xl bg-indigo-500 text-white flex items-center justify-center text-2xl font-bold shadow-md">
