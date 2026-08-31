@@ -88,16 +88,27 @@ const MainLayout: React.FC = () => {
       className="min-h-screen flex flex-col justify-between overflow-x-hidden relative"
       style={{
         ...(containerBgStyle || { backgroundColor: '#ffffff' }),
-        ...(!containerBgStyle && {
-          backgroundImage: `url('/c-hub.png')`,
-          backgroundSize: '100% 100%',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          backgroundAttachment: 'fixed',
-        }),
         transition: 'background-color 0.65s cubic-bezier(0.4, 0, 0.2, 1), color 0.5s ease'
       }}
     >
+      {/* Sliding c-hub.png background layer (slides down from top after splash, matching header+homepage) */}
+      {!isProductShowcase && (
+        <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+          <motion.div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `url('/c-hub.png')`,
+              backgroundSize: '100% 100%',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+            }}
+            transition={{ type: 'spring', stiffness: 140, damping: 18, mass: 0.85, duration: 0.9 }}
+            initial={{ y: '-100%' }}
+            animate={splashShown ? { y: '0%' } : { y: '-100%' }}
+          />
+        </div>
+      )}
+
       {/* Enhanced Animated White Splash Screen */}
       <SplashScreen />
 
@@ -131,7 +142,7 @@ const MainLayout: React.FC = () => {
             mass: 0.85,
             duration: 0.9
           }}
-          className="flex flex-col flex-1 w-full justify-between"
+          className="relative z-10 flex flex-col flex-1 w-full justify-between"
         >
           <div className="flex flex-col flex-1">
             <Header />
