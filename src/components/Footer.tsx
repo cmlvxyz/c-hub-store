@@ -82,7 +82,7 @@ export const Footer: React.FC = () => {
         borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
       }}
     >
-      <div className="max-w-[1300px] mx-auto px-6 sm:px-10">
+      <div className="max-w-7xl mx-auto px-6 sm:px-10">
         
         {/* Top Grid: 4 Columns */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-12 pb-14 border-b" style={{ borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>

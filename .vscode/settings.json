@@ -1,0 +1,12 @@
+{
+  "tailwindCSS.lint.cssConflict": "ignore",
+  "tailwindCSS.lint.invalidVariant": "ignore",
+  "tailwindCSS.lint.invalidTailwindDirective": "ignore",
+  "tailwindCSS.lint.recommendedVariantOrder": "ignore",
+  "tailwindCSS.classAttributes": [
+    "class",
+    "className",
+    "className\s*\+\s*\"",
+    "className\s*\+\s*'"
+  ]
+}

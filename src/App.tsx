@@ -97,7 +97,7 @@ const MainLayout: React.FC = () => {
           <motion.div
             className="absolute inset-0"
             style={{
-              backgroundImage: `url('/c-hub.png')`,
+              backgroundImage: `url('/c-hub5.png')`,
               backgroundSize: '100% 100%',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
@@ -161,7 +161,7 @@ const MainLayout: React.FC = () => {
             </main>
           </div>
 
-          {page !== 'login' && <Footer />}
+          {isProductShowcase && <Footer />}
         </motion.div>
       ) : (
         <div className="opacity-0 pointer-events-none h-screen" />

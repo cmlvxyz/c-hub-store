@@ -194,9 +194,9 @@ export const PRODUCTS_CONFIG: Record<string, Record<GenderType, CategoryData>> =
           { name: 'Boys Polo - Sunset Orange', image: 'brown2.png', colorName: 'Orange', bgColor: '#E88A3A', textColor: '#FFFFFF' }
         ],
         poloshirt: [
-          { name: 'Boys Polo Shirt - White', image: 'white1.png', colorName: 'White', bgColor: '#F0F0F0', textColor: '#1d1a18' },
-          { name: 'Boys Polo Shirt - Slate Blue', image: 'blue1.png', colorName: 'Slate Blue', bgColor: '#3A5A8A', textColor: '#FFFFFF' },
-          { name: 'Boys Polo Shirt - Crimson', image: 'burgundy.png', colorName: 'Crimson', bgColor: '#B44A4A', textColor: '#FFFFFF' },
+          { name: 'Boys Polo Shirt - White', image: '/images/clothes/boys/poloshirt/bpoloshirt1.png', colorName: 'White', bgColor: '#F0F0F0', textColor: '#1d1a18' },
+          { name: 'Boys Polo Shirt - Slate Blue', image: '/images/clothes/boys/poloshirt/bpoloshirt2.png', colorName: 'Slate Blue', bgColor: '#3A5A8A', textColor: '#FFFFFF' },
+          { name: 'Boys Polo Shirt - Crimson', image: '/images/clothes/boys/poloshirt/bpoloshirt3.png', colorName: 'Crimson', bgColor: '#B44A4A', textColor: '#FFFFFF' },
           { name: 'Boys Polo Shirt - Pine Green', image: 'sage.png', colorName: 'Pine Green', bgColor: '#4A7A5A', textColor: '#FFFFFF' },
           { name: 'Boys Polo Shirt - Navy', image: 'blue.png', colorName: 'Navy', bgColor: '#2A3A5A', textColor: '#FFFFFF' },
           { name: 'Boys Polo Shirt - Gray', image: 'gray1.png', colorName: 'Gray', bgColor: '#8A8A8A', textColor: '#FFFFFF' }
@@ -258,9 +258,9 @@ export const PRODUCTS_CONFIG: Record<string, Record<GenderType, CategoryData>> =
           { name: 'Peplum Top - Obsidian Black', image: '/images/clothes/women/top/top6.png', colorName: 'Obsidian Black', bgColor: '#3A3A3A', textColor: '#FFFFFF' }
         ],
         dress: [
-          { name: 'Summer Halter Dress - Polka White', image: '/images/clothes/women/dress/dress1.png', colorName: 'Polka White', bgColor: '#F4F2EE', textColor: '#1d1a18' },
-          { name: 'Summer Halter Dress - Sky Stripe', image: '/images/clothes/women/dress/dress2.png', colorName: 'Sky Stripe', bgColor: '#DDEAF5', textColor: '#1d1a18' },
-          { name: 'Summer Halter Dress - Buttercup Gingham', image: '/images/clothes/women/dress/dress3.png', colorName: 'Buttercup Gingham', bgColor: '#F2E29A', textColor: '#1d1a18' },
+          { name: 'Summer Halter Dress - Polka White', image: '/images/clothes/girls/dress/gdress1.png', colorName: 'Polka White', bgColor: '#F4F2EE', textColor: '#1d1a18' },
+          { name: 'Summer Halter Dress - Sky Stripe', image: '/images/clothes/girls/dress/gdress2.png', colorName: 'Sky Stripe', bgColor: '#DDEAF5', textColor: '#1d1a18' },
+          { name: 'Summer Halter Dress - Buttercup Gingham', image: '/images/clothes/girls/dress/gdress3.png', colorName: 'Buttercup Gingham', bgColor: '#F2E29A', textColor: '#1d1a18' },
           { name: 'Summer Halter Dress - Rose Gingham', image: '/images/clothes/women/dress/dress4.png', colorName: 'Rose Gingham', bgColor: '#E9BDD1', textColor: '#1d1a18' },
           { name: 'Summer Halter Dress - Ocean Gingham', image: '/images/clothes/women/dress/dress5.png', colorName: 'Ocean Gingham', bgColor: '#AFC7E8', textColor: '#1d1a18' },
           { name: 'Summer Halter Dress - Midnight Polka', image: '/images/clothes/women/dress/dress6.png', colorName: 'Midnight Polka', bgColor: '#36395F', textColor: '#FFFFFF' }
@@ -315,7 +315,7 @@ export const PRODUCTS_CONFIG: Record<string, Record<GenderType, CategoryData>> =
         sandals: { price: 1599, original: 2299 }
       },
       products: {
-        sneakers: [
+        shoes: [
           { name: 'Urban Sneakers - Chalk White', image: 'shoes1.png', colorName: 'Chalk White', bgColor: '#F5F5F5', textColor: '#1d1a18' },
           { name: 'Urban Sneakers - Stealth Charcoal', image: 'shoes2.png', colorName: 'Stealth Charcoal', bgColor: '#4A4A4A', textColor: '#FFFFFF' },
           { name: 'Urban Sneakers - Deep Navy', image: 'shoes3.png', colorName: 'Deep Navy', bgColor: '#2A3459', textColor: '#FFFFFF' },
@@ -323,7 +323,7 @@ export const PRODUCTS_CONFIG: Record<string, Record<GenderType, CategoryData>> =
           { name: 'Urban Sneakers - Crimson Red', image: 'shoes5.png', colorName: 'Crimson Red', bgColor: '#D44545', textColor: '#FFFFFF' },
           { name: 'Urban Sneakers - Emerald Green', image: 'shoes6.png', colorName: 'Emerald Green', bgColor: '#2A8C5E', textColor: '#FFFFFF' }
         ],
-        boots: [
+        sleepers: [
           { name: 'Leather Boots - Desert Tan', image: 'shoes1.png', colorName: 'Desert Tan', bgColor: '#CEB699', textColor: '#FFFFFF' },
           { name: 'Leather Boots - Vintage Plum', image: 'shoes2.png', colorName: 'Vintage Plum', bgColor: '#806875', textColor: '#FFFFFF' },
           { name: 'Leather Boots - Rosewood', image: 'shoes3.png', colorName: 'Rosewood', bgColor: '#E7A8CA', textColor: '#1d1a18' },
@@ -331,7 +331,7 @@ export const PRODUCTS_CONFIG: Record<string, Record<GenderType, CategoryData>> =
           { name: 'Leather Boots - Port Burgundy', image: 'shoes5.png', colorName: 'Port Burgundy', bgColor: '#572A34', textColor: '#FFFFFF' },
           { name: 'Leather Boots - Dark Espresso', image: 'shoes6.png', colorName: 'Dark Espresso', bgColor: '#433630', textColor: '#FFFFFF' }
         ],
-        sandals: [
+        blackshoes: [
           { name: 'Slide Sandals - Sandstone', image: 'shoes1.png', colorName: 'Sandstone', bgColor: '#F5F4EF', textColor: '#1d1a18' },
           { name: 'Slide Sandals - Slate Mist', image: 'shoes2.png', colorName: 'Slate Mist', bgColor: '#E6E5E1', textColor: '#1d1a18' },
           { name: 'Slide Sandals - Royal Blue', image: 'shoes3.png', colorName: 'Royal Blue', bgColor: '#28479D', textColor: '#FFFFFF' },
@@ -630,11 +630,11 @@ export const PRODUCTS_CONFIG: Record<string, Record<GenderType, CategoryData>> =
       },
       products: {
         jeans: [
-          { name: 'Boys Classic Denim - Light Gray', image: 'pants1.png', colorName: 'Light Gray', bgColor: '#D9D9D9', textColor: '#1E1E1E' },
-          { name: 'Boys Classic Denim - Medium Wash', image: 'pants2.png', colorName: 'Medium Wash', bgColor: '#D6D6D6', textColor: '#1E1E1E' },
-          { name: 'Boys Classic Denim - Sandstone', image: 'pants3.png', colorName: 'Sandstone', bgColor: '#F3EFE6', textColor: '#1E1E1E' },
-          { name: 'Boys Classic Denim - Vintage Ash', image: 'pants4.png', colorName: 'Vintage Ash', bgColor: '#D8D8D8', textColor: '#1E1E1E' },
-          { name: 'Boys Classic Denim - Deep Blue', image: 'pants5.png', colorName: 'Deep Blue', bgColor: '#223A67', textColor: '#FFFFFF' },
+          { name: 'Boys Classic Denim - Light Gray', image: '/images/pants/boys/pants/bpants1.png', colorName: 'Light Gray', bgColor: '#D9D9D9', textColor: '#1E1E1E' },
+          { name: 'Boys Classic Denim - Medium Wash', image: '/images/pants/boys/pants/bpants2.png', colorName: 'Medium Wash', bgColor: '#D6D6D6', textColor: '#1E1E1E' },
+          { name: 'Boys Classic Denim - Sandstone', image: '/images/pants/boys/pants/bpants3.png', colorName: 'Sandstone', bgColor: '#F3EFE6', textColor: '#1E1E1E' },
+          { name: 'Boys Classic Denim - Vintage Ash', image: '/images/pants/boys/pants/bpants4.png', colorName: 'Vintage Ash', bgColor: '#D8D8D8', textColor: '#1E1E1E' },
+          { name: 'Boys Classic Denim - Deep Blue', image: '/images/pants/boys/pants/bpants5.png', colorName: 'Deep Blue', bgColor: '#223A67', textColor: '#FFFFFF' },
           { name: 'Boys Classic Denim - Earth Brown', image: 'pants6.png', colorName: 'Earth Brown', bgColor: '#4A3328', textColor: '#FFFFFF' }
         ],
         shorts: [

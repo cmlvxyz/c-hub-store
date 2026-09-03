@@ -208,13 +208,20 @@ export const ProductShowcase: React.FC = () => {
 
   return (
     <div className="w-full relative transition-colors duration-700 py-3 sm:py-6 px-4 sm:px-8">
-      <div className="max-w-[1360px] mx-auto min-h-[640px] flex flex-col justify-between">
+      <div className="max-w-85rem mx-auto min-h-40rem flex flex-col justify-between">
         
         {/* Top Product Category Tabs - Clothes, Pants, Shoes, Underwear, Accessories */}
         <div className="flex flex-wrap items-center justify-start gap-2 pb-3 border-black/5 dark:border-white/10 relative z-20 mt-6 ml-6 lg:ml-10">
           {(['clothes', 'pants', 'shoes', 'underwear', 'accessories'] as PageType[]).map((cat) => {
             const isSelected = page === cat;
-            const label = cat.charAt(0).toUpperCase() + cat.slice(1);
+            const categoryLabels: Record<string, string> = {
+              clothes: 'Clothes',
+              shoes: 'Footwear',
+              pants: 'Pants',
+              underwear: 'Underwear',
+              accessories: 'Accessories'
+            };
+            const label = categoryLabels[cat] || cat.charAt(0).toUpperCase() + cat.slice(1);
             return (
               <button
                 key={cat}

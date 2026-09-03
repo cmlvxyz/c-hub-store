@@ -109,9 +109,9 @@ export const ShopPage: React.FC = () => {
             placeholder="Search categories..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-5 pr-11 py-3 rounded-full bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 dark:focus:ring-stone-600 text-stone-900 dark:text-white placeholder-stone-400 shadow-sm transition-all"
+            className="w-full pl-5 pr-11 py-3 rounded-full bg-white dark:bg-indigo-900 border-[1px] border-indigo-500 dark:border-indigo-500 text-sm text-stone-900 dark:text-white placeholder-stone-400 shadow-sm transition-all"
           />
-          <Search className="absolute right-4 top-[25px] -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none" />
+          <Search className="absolute right-4 top-[35px] -translate-y-1/2 w-5 h-5 text-stone-400 pointer-events-none" />
         </div>
       </div>
 

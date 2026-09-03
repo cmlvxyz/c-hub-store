@@ -28,13 +28,8 @@ export const HomePage: React.FC = () => {
       {/* WALA NA YUNG HEADER DITO. Nasa App.tsx na siya! */}
 
       {/* ===== HERO SECTION ===== */}
-      <section className="max-w-[1360px] mx-auto px-4 sm:px-8">
-        <div className="relative rounded-[2.5rem] bg-gradient-to-br from-white via-indigo-50/40 to-stone-50 text-stone-900 overflow-hidden p-8 sm:p-12 lg:p-16">
-          
-          {/* Ambient Glow */}
-          <div className="absolute -top-24 -right-24 w-96 h-96 bg-indigo-200/40 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-amber-100/50 rounded-full blur-3xl pointer-events-none" />
-
+      <section className="max-w-[99%] mx-auto px-4 sm:px-8">
+        <div className="relative rounded-[2.5rem] text-stone-900 overflow-hidden p-8 sm:p-12 lg:p-16 ">
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
             
             {/* Left Hero Text */}
@@ -87,7 +82,7 @@ export const HomePage: React.FC = () => {
             </div>
 
             {/* Right Hero - Hang Tags & Featured Piece */}
-            <div className="lg:col-span-5 flex items-center justify-center relative h-[360px] lg:-left-20">
+            <div className="lg:col-span-5 flex items-center justify-center relative h-90 lg:-left-20">
               
               {/* Hang Tag 1 - Navy */}
               <motion.div 
@@ -115,7 +110,7 @@ export const HomePage: React.FC = () => {
               <motion.div 
                 whileHover={{ scale: 1.05, rotate: 2 }}
                 onClick={() => setPage('clothes', 'tshirt', 'men')}
-                className="relative w-56 h-56 rounded-3xl bg-white border border-stone-200 flex flex-col items-center justify-center shadow-2xl group cursor-pointer overflow-hidden p-3"
+                className="relative w-56 h-56 rounded-3xl bg-white-50/50 flex flex-col items-center justify-center shadow-2xl group cursor-pointer overflow-hidden p-3"
               >
                 <div className="absolute top-3 right-3 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
                   Featured
@@ -140,7 +135,7 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* ===== STAT STRIP ===== */}
-      <section className="max-w-[1300px] mx-auto px-4 sm:px-8">
+      <section className="max-w-7xl mx-auto px-4 sm:px-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 rounded-3xl bg-white border border-stone-200/80 shadow-sm">
           <div className="p-4">
             <p className="text-3xl font-black text-stone-900 font-serif">15,000+</p>
@@ -160,7 +155,7 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* ===== SHOP BY CATEGORY ===== */}
-      <section className="max-w-[1300px] mx-auto px-4 sm:px-8 space-y-6">
+      <section className="max-w-7xl mx-auto px-4 sm:px-8 space-y-6">
         <div className="flex items-end justify-between">
           <div>
             <span className="text-xs font-black uppercase tracking-widest text-indigo-600">Curated Lineup</span>
@@ -185,7 +180,7 @@ export const HomePage: React.FC = () => {
                 setGender(cat.defaultGender);
                 setPage(cat.id);
               }}
-              className={`${cat.bg} text-white rounded-3xl p-5 hover:scale-[1.03] hover:shadow-2xl transition-all duration-300 text-left group min-h-[170px] flex flex-col justify-between cursor-pointer border border-white/10 relative overflow-hidden`}
+              className={`${cat.bg} text-white rounded-3xl p-5 hover:scale-[1.03] hover:shadow-2xl transition-all duration-300 text-left group min-h-[10.6rem] flex flex-col justify-between cursor-pointer border border-white/10 relative overflow-hidden`}
             >
               <div className="w-11 h-11 rounded-2xl bg-white/10 flex items-center justify-center text-white/80 group-hover:text-white group-hover:bg-indigo-600 transition-all">
                 {cat.icon}
@@ -200,8 +195,8 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* ===== OUR STORY SECTION ===== */}
-      <section id="aboutStorySection" className="max-w-[1300px] mx-auto px-4 sm:px-8">
-        <div className="p-8 sm:p-12 rounded-3xl bg-stone-900 text-white space-y-4">
+      <section id="aboutStorySection" className="max-w-7xl mx-auto px-4 sm:px-8">
+        <div className="p-8 sm:p-12 rounded-3xl bg-stone-700 text-white space-y-4">
           <span className="text-xs font-black uppercase tracking-widest text-indigo-400">Our Heritage</span>
           <h2 className="text-3xl sm:text-4xl font-black font-serif text-white max-w-xl">
             Designed for durability, styled for individuality.
