@@ -119,7 +119,7 @@ const MainLayout: React.FC = () => {
       {page === 'shop' && (
         <div
           className="fixed inset-0 z-0 pointer-events-none md:hidden"
-          style={{ backgroundColor: shopBgColor }}
+          style={{ backgroundColor: shopBgColor, transition: 'background-color 420ms cubic-bezier(0.22, 1, 0.36, 1)' }}
         />
       )}
 

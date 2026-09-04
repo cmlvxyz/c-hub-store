@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useStore } from '../context/StoreContext';
 import { PageType, GenderType } from '../types';
-import { PRODUCTS_CONFIG, CategoryData } from '../data/products';
+import { PRODUCTS_CONFIG, CategoryData, withWhiteFirst } from '../data/products';
 import { ProductVisual } from './ProductVisual';
 import { Search, Menu, X, ChevronLeft, ChevronRight, ShoppingBag, ShoppingCart } from 'lucide-react';
 
@@ -84,8 +84,6 @@ const tileSubFor = (t: ShopTile, g: GenderType): string =>
     : g === 'boys' ? t.boysSub
     : t.girlsSub;
 
-const CATEGORY_PAGES: PageType[] = ['clothes', 'shoes', 'pants', 'underwear', 'accessories'];
-
 interface FlatProduct {
   key: string;
   name: string;
@@ -99,7 +97,25 @@ interface FlatProduct {
   original: number;
 }
 
-const buildList = (sel: ShopTile | 'all', g: GenderType): FlatProduct[] => {
+const SLIDE_MS = 420;
+const SLIDE_EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+// Taas ng isang sidebar slot = 1/3 ng container (3 item visible, mas malayo agwat).
+const SIDEBAR_SLOT = '33.333%';
+type SlideDir = 'next' | 'prev';
+
+const MainProductVisual: React.FC<{ product: FlatProduct }> = ({ product }) => (
+  <ProductVisual
+    category={product.category}
+    subCategory={product.sub}
+    colorName={product.colorName}
+    bgColor={product.bgColor}
+    name={product.name}
+    image={product.image}
+    className="w-[70%] h-[70%] object-contain"
+  />
+);
+
+const buildList = (sel: ShopTile, g: GenderType): FlatProduct[] => {
   const out: FlatProduct[] = [];
   const pushCategory = (cat: PageType, subs: string[]) => {
     const cfg = PRODUCTS_CONFIG[cat]?.[g] as CategoryData | undefined;
@@ -124,14 +140,7 @@ const buildList = (sel: ShopTile | 'all', g: GenderType): FlatProduct[] => {
     });
   };
 
-  if (sel === 'all') {
-    CATEGORY_PAGES.forEach((cat) => {
-      const cfg = PRODUCTS_CONFIG[cat]?.[g] as CategoryData | undefined;
-      pushCategory(cat, cfg ? Object.keys(cfg.products || {}) : []);
-    });
-  } else {
-    pushCategory(sel.category, [tileSubFor(sel, g)]);
-  }
+  pushCategory(sel.category, [tileSubFor(sel, g)]);
   return out;
 };
 
@@ -143,53 +152,121 @@ const MobileShop: React.FC = () => {
   const genderOptions: GenderType[] = ['men', 'women', 'boys', 'girls'];
 
   const [mobileGender, setMobileGender] = useState<GenderType>(gender || 'men');
-  const [sel, setSel] = useState<ShopTile | 'all'>('all');
+  const [sel, setSel] = useState<ShopTile>(shopTiles[0]);
   const [list, setList] = useState<FlatProduct[]>([]);
   const [idx, setIdx] = useState(0);
   const [size, setSize] = useState('S');
   const [menuOpen, setMenuOpen] = useState(false);
-  const listRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [anim, setAnim] = useState<{ fromIdx: number; toIdx: number; dir: SlideDir; phase: 'prep' | 'run' } | null>(null);
+  const touchStartRef = useRef<number | null>(null);
+  const touchXRef = useRef<number>(0);
+  const touchYRef = useRef<number>(0);
+  const animTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const animRaf = useRef<number | null>(null);
+  const mainBoxRef = useRef<HTMLDivElement | null>(null);
+  const srcImgRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [fly, setFly] = useState<{
+    product: FlatProduct;
+    from: { x: number; y: number; w: number; h: number };
+    to: { x: number; y: number; w: number; h: number };
+  } | null>(null);
+
+  const cancelAnim = () => {
+    if (animTimer.current) { clearTimeout(animTimer.current); animTimer.current = null; }
+    if (animRaf.current != null) { cancelAnimationFrame(animRaf.current); animRaf.current = null; }
+    setFly(null);
+    setAnim(null);
+  };
 
   useEffect(() => {
+    cancelAnim();
     setList(buildList(sel, mobileGender));
     setIdx(0);
     setSize('S');
   }, [sel, mobileGender]);
 
-  const active = list[idx] || list[0];
+  const filteredList = useMemo(() => {
+    const base = searchQuery.trim()
+      ? list.filter((p) => `${p.name} ${p.colorName}`.toLowerCase().includes(searchQuery.toLowerCase()))
+      : list;
+    // Same pagkasunod ng kulay sa desktop: unahin ang White, sundan ng natural order.
+    return withWhiteFirst(base);
+  }, [list, searchQuery]);
+
+  const shownActive = filteredList[idx] || filteredList[0] || list[0];
+  const active = shownActive;
+
+  // Pie-meter counter (optional visual): kailangan sa layering ng main slide.
+  // Ang sidebar ay galing sa filteredList mismo (circular) — walang hiwalay na list.
+
+  // Pinipisohang translate para sa sidebar roll. Gumagamit ng mono-window na
+  // `len + ((idx+1)%len)` para laging 1 slot lang ang ililipat pataas kada NEXT
+  // (at pababa sa PREV) — kahit mag-wrap mula sa huling kulay pabalik sa una,
+  // tuluy-tuloy lang ang animation, hindi nag-c-cut o sumasampa pababa.
+  const sidebarTrackStyle = (): React.CSSProperties => {
+    const run = anim && anim.phase === 'run';
+    const len = filteredList.length || 1;
+    const restTop = len + ((idx + 1) % len);
+    let topIdx = restTop;
+    if (run) {
+      topIdx = anim.dir === 'next' ? restTop + 1 : restTop - 1;
+    }
+    return {
+      display: 'flex',
+      flexDirection: 'column',
+      transform: `translateY(calc(-${topIdx} * ${SIDEBAR_SLOT}))`,
+      transition: run ? `transform ${SLIDE_MS}ms ${SLIDE_EASE}` : 'none',
+      willChange: 'transform',
+    };
+  };
 
   const categoryConfig = active ? (PRODUCTS_CONFIG[active.category]?.[mobileGender] as CategoryData | undefined) : undefined;
   const sizes = (active && categoryConfig?.sizes?.[active.sub]) || ['S', 'M', 'L', 'XL'];
-  const desc = (active && categoryConfig?.headlines?.[active.sub]?.desc) || active?.name || '';
 
   useEffect(() => {
     if (sizes.length && !sizes.includes(size)) setSize(sizes[0]);
   }, [active?.sub, sizes]);
 
   useEffect(() => {
-    const el = listRefs.current[idx];
-    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }, [idx]);
+    cancelAnim();
+    setIdx(0);
+  }, [searchQuery]);
 
-  useEffect(() => { setIdx(0); }, [searchQuery]);
+  useEffect(() => {
+    if (!anim) return;
+    if (anim.phase === 'prep') {
+      animRaf.current = requestAnimationFrame(() => {
+        animRaf.current = requestAnimationFrame(() => {
+          setAnim((a) => (a && a.phase === 'prep' ? { ...a, phase: 'run' } : a));
+        });
+      });
+      return () => {
+        if (animRaf.current != null) { cancelAnimationFrame(animRaf.current); animRaf.current = null; }
+      };
+    }
+    animTimer.current = setTimeout(() => {
+      setIdx(anim.toIdx);
+      setFly(null);
+      setAnim(null);
+      animTimer.current = null;
+    }, SLIDE_MS);
+    return () => {
+      if (animTimer.current) { clearTimeout(animTimer.current); animTimer.current = null; }
+    };
+  }, [anim]);
 
-  const filteredList = useMemo(() => {
-    const base = searchQuery.trim()
-      ? list.filter((p) => `${p.name} ${p.colorName}`.toLowerCase().includes(searchQuery.toLowerCase()))
-      : list;
-    // Darkest product muna sa sidebar para visible vs light shop background.
-    return [...base].sort((a, b) => LUM(a.bgColor) - LUM(b.bgColor));
-  }, [list, searchQuery]);
-
-  const shownActive = filteredList[idx] || filteredList[0] || active;
-
-  // Buong shop: kulay ng napiling (main) product.
-  const shopBg = shownActive?.bgColor || '#ffffff';
+  // Kulay ng buong screen = kulay ng produktong nasa main.
+  // Habang nag-s-slide, gamitin ang papasok (incoming) na product kaya
+  // sabay-sabay ang pagpalit ng kulay sa animation (walang delay).
+  const syncColor = anim
+    ? (filteredList[anim.toIdx] || shownActive)?.bgColor
+    : shownActive?.bgColor;
+  const shopBg = syncColor || '#ffffff';
   const bgIsLight = isLightBg(shopBg);
   const textMain = bgIsLight ? 'text-stone-900' : 'text-white';
   const textSub = bgIsLight ? 'text-stone-600' : 'text-white/75';
 
-  // Ibahagi ang kulay sa header (mobile pill) para kumulay rin ito.
+  // Ibahagi sa buong screen (App overlay) para pantay ang kulay.
   useEffect(() => { setShopBgColor(shopBg); }, [shopBg, setShopBgColor]);
 
   const switchGender = (g: GenderType) => {
@@ -197,13 +274,137 @@ const MobileShop: React.FC = () => {
     setGender(g);
   };
 
-  const pickTile = (t: ShopTile | 'all') => {
+  const pickTile = (t: ShopTile) => {
+    cancelAnim();
     setSel(t);
     setMenuOpen(false);
   };
 
-  const next = () => { if (filteredList.length > 1) setIdx((idx + 1) % filteredList.length); };
-  const prev = () => { if (filteredList.length > 1) setIdx((idx - 1 + filteredList.length) % filteredList.length); };
+  const startSlide = (to: number, dir: SlideDir) => {
+    if (filteredList.length < 2 || anim || to === idx) return;
+    if (animTimer.current) { clearTimeout(animTimer.current); animTimer.current = null; }
+    if (animRaf.current != null) { cancelAnimationFrame(animRaf.current); animRaf.current = null; }
+    const incoming = filteredList[to];
+    // Hanapin ang kasalukuyang nasa sidebar na product (para sa next: tuktok).
+    const len = filteredList.length;
+    const sourcePhys = len + ((idx + 1) % len);
+    const srcEl = srcImgRefs.current[sourcePhys];
+    const mainEl = mainBoxRef.current;
+    const toRect = mainEl?.getBoundingClientRect();
+    if (toRect && incoming) {
+      const from = srcEl
+        ? srcEl.getBoundingClientRect()
+        : { left: toRect.left, top: toRect.top + toRect.height - 80, width: 80, height: 80 };
+      setFly({
+        product: incoming,
+        from: { x: from.left, y: from.top, w: from.width, h: from.height },
+        to: { x: toRect.left, y: toRect.top, w: toRect.width, h: toRect.height },
+      });
+    }
+    setAnim({ fromIdx: idx, toIdx: to, dir, phase: 'prep' });
+  };
+
+  const next = () => {
+    if (filteredList.length < 2) return;
+    startSlide((idx + 1) % filteredList.length, 'next');
+  };
+
+  const prev = () => {
+    if (filteredList.length < 2) return;
+    startSlide((idx - 1 + filteredList.length) % filteredList.length, 'prev');
+  };
+
+  // Touch/Swipe gestures para sa TikTok-style mobile UX.
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    if (!t) return;
+    touchStartRef.current = Date.now();
+    touchXRef.current = t.clientX;
+    touchYRef.current = t.clientY;
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (touchStartRef.current == null) return;
+    const t = e.touches[0];
+    if (!t) return;
+    const dx = t.clientX - touchXRef.current;
+    const dy = t.clientY - touchYRef.current;
+    // Pag pahalang na swipe na lang ang pigilan, hindi ang vertical scroll.
+    if (Math.abs(dx) > 24 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+      e.preventDefault();
+    }
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartRef.current == null) return;
+    const t = e.changedTouches[0];
+    if (!t) return;
+    const dx = t.clientX - touchXRef.current;
+    const dy = t.clientY - touchYRef.current;
+    const dt = Date.now() - touchStartRef.current;
+    touchStartRef.current = null;
+    // Swipe left => next(), swipe right => prev(). Ignore vertical scroll & taps.
+    if (Math.abs(dx) < 30 || Math.abs(dx) < Math.abs(dy) * 1.5 || dt > 600) return;
+    if (dx < 0) next(); else prev();
+  };
+
+  const layerStyle = (role: 'out' | 'in'): React.CSSProperties => {
+    const dir = anim?.dir ?? 'next';
+    const goingNext = dir === 'next';
+    let x = '0%';
+    if (anim) {
+      const run = anim.phase === 'run';
+      if (role === 'out') x = run ? (goingNext ? '100%' : '-100%') : '0%';
+      else x = run ? '0%' : (goingNext ? '-100%' : '100%');
+    }
+    // Kapag may fly layer, i-hide ang papasok sa main (maiiwasan ang double image);
+    // ang product visual ay dala ng fly layer mula sa sidebar.
+    const hidden = role === 'in' && !!fly && anim?.phase === 'run';
+    return {
+      position: 'absolute',
+      inset: 0,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      transform: `translate3d(${x}, 0, 0)`,
+      opacity: hidden ? 0 : (anim && role === 'out' && anim.phase === 'run' ? 0.85 : 1),
+      transition: anim && anim.phase === 'run'
+        ? `transform ${SLIDE_MS}ms ${SLIDE_EASE}, opacity ${SLIDE_MS}ms ${SLIDE_EASE}`
+        : 'none',
+      willChange: 'transform',
+      pointerEvents: 'none',
+    };
+  };
+
+  // Position/size ng temporary fly layer — nagtatawid mula sa sidebar box papuntang main.
+  // Naka-main-size na agad (walang paglalaki); translate lang para smooth ang slide.
+  const flyStyle = (): React.CSSProperties => {
+    if (!fly) return { display: 'none' };
+    const going = anim?.phase === 'run';
+    const fxc = fly.from.x + fly.from.w / 2;
+    const fyc = fly.from.y + fly.from.h / 2;
+    const txc = fly.to.x + fly.to.w / 2;
+    const tyc = fly.to.y + fly.to.h / 2;
+    const offX = going ? 0 : fxc - txc;
+    const offY = going ? 0 : fyc - tyc;
+    return {
+      position: 'fixed',
+      left: fly.to.x,
+      top: fly.to.y,
+      width: fly.to.w,
+      height: fly.to.h,
+      zIndex: 50,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      transform: `translate3d(${offX}px, ${offY}px, 0)`,
+      transition: going ? `transform ${SLIDE_MS}ms ${SLIDE_EASE}` : 'none',
+      pointerEvents: 'none',
+    };
+  };
+
+  const outgoingProduct = anim ? (filteredList[anim.fromIdx] || shownActive) : shownActive;
+  const incomingProduct = anim ? filteredList[anim.toIdx] : undefined;
 
   const cartPayload = (p: FlatProduct) => ({
     id: `${p.category}-${mobileGender}-${p.sub}-${p.colorName}-${size}`,
@@ -230,10 +431,15 @@ const MobileShop: React.FC = () => {
     setPage('checkout');
   };
 
-  const currentLabel = sel === 'all' ? 'All Products' : sel.label;
-
   return (
-    <div className="w-full transition-colors duration-500" style={{ backgroundColor: shopBg, minHeight: 'calc(100vh - 8rem)' }}>
+    <div
+      className="w-full"
+      style={{
+        backgroundColor: shopBg,
+        minHeight: 'calc(100vh - 8rem)',
+        transition: `background-color ${SLIDE_MS}ms ${SLIDE_EASE}`
+      }}
+    >
       {/* Category tabs */}
       <div className={`flex items-center gap-1.5 px-4 pt-4 pb-2 overflow-x-auto no-scrollbar ${textMain}`}>
         <button
@@ -258,46 +464,47 @@ const MobileShop: React.FC = () => {
             {g}
           </button>
         ))}
-        <span className={`ml-auto shrink-0 text-[11px] font-bold ${textSub}`}>{currentLabel}</span>
       </div>
 
       {/* Two-pane content */}
       {filteredList.length > 0 ? (
-        <div className="grid grid-cols-[38%_62%] gap-3 px-4 pt-1 pb-4">
-          {/* LEFT: product list (stretch sa screen, 4 visible na may gap, scroll ang 5+) */}
-          <div
-            className="no-scrollbar flex flex-col justify-between overflow-y-auto pr-1"
-            style={{ scrollbarWidth: 'none', height: 'calc(100vh - 9rem)', maxHeight: 'calc(100vh - 9rem)' }}
-          >
-            {filteredList.map((p, i) => {
-              const isActive = shownActive && p.key === shownActive.key;
-              return (
-                <button
-                  key={p.key}
-                  ref={(el) => { listRefs.current[i] = el; }}
-                  onClick={() => setIdx(i)}
-                  className={`w-full shrink-0 text-center cursor-pointer transition-transform active:scale-95 ${
-                    isActive ? 'text-indigo-600' : textMain
-                  }`}
-                >
-                  <div className="mx-auto w-16 h-16 rounded-xl overflow-hidden flex items-center justify-center pointer-events-none select-none">
-                    <ProductVisual
-                      category={p.category}
-                      subCategory={p.sub}
-                      colorName={p.colorName}
-                      bgColor={p.bgColor}
-                      name={p.name}
-                      image={p.image}
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                  <p className={`text-[10px] font-bold leading-tight line-clamp-1 mt-1 ${isActive ? 'text-indigo-600' : textMain}`}>
-                    {p.colorName} Plain
-                  </p>
-                  <p className={`text-[10px] leading-tight ${isActive ? 'text-indigo-500' : textSub}`}>{subLabelOf(p.sub)}</p>
-                </button>
-              );
-            })}
+        <>
+        <div className="grid grid-cols-[38%_62%] gap-1 px-4 pt-1 pb-4">
+          {/* LEFT: product list — 4 na item visible, naka-stretch hanggang main (Buy Now/Cart) */}
+          <div className="relative overflow-hidden pr-1">
+            <div className="absolute inset-0" style={sidebarTrackStyle()}>
+              {[...filteredList, ...filteredList, ...filteredList].map((p, i) => {
+                return (
+                  <button
+                    key={`${p.key}-${i}`}
+                    onClick={() => {
+                      cancelAnim();
+                      setIdx(i % filteredList.length);
+                    }}
+                    className={`w-full h-[33.333%] shrink-0 flex flex-col items-center justify-between text-center py-1 cursor-pointer transition-transform active:scale-95 ${textMain}`}
+                  >
+                    <div
+                      ref={(el) => { srcImgRefs.current[i] = el; }}
+                      className="mx-[25px] my-1.5 w-16 h-16 rounded-xl overflow-hidden flex items-center justify-center pointer-events-none select-none"
+                    >
+                      <ProductVisual
+                        category={p.category}
+                        subCategory={p.sub}
+                        colorName={p.colorName}
+                        bgColor={p.bgColor}
+                        name={p.name}
+                        image={p.image}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <p className={`m-0 -mb-1 text-[10px] font-bold leading-none line-clamp-1 ${textMain}`}>
+                      {p.colorName} Plain
+                    </p>
+                    <p className={`m-0 mb-8 text-[10px] leading-none ${textSub}`}>{subLabelOf(p.sub)}</p>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* RIGHT: main product */}
@@ -307,17 +514,24 @@ const MobileShop: React.FC = () => {
                 <h3 className={`text-base font-black leading-tight ${textMain}`}>{subLabelOf(shownActive.sub).toUpperCase()}</h3>
               </div>
 
-              {/* Large image (walang box) */}
-              <div className="relative flex items-center justify-center aspect-square overflow-hidden">
-                <ProductVisual
-                  category={shownActive.category}
-                  subCategory={shownActive.sub}
-                  colorName={shownActive.colorName}
-                  bgColor={shownActive.bgColor}
-                  name={shownActive.name}
-                  image={shownActive.image}
-                  className="w-[70%] h-[70%] object-contain"
-                />
+              {/* Large image (walang box) — sliding carousel layers */}
+              <div
+                ref={mainBoxRef}
+                className="relative aspect-square overflow-hidden touch-pan-y"
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}
+              >
+                {outgoingProduct && (
+                  <div key={outgoingProduct.key} style={layerStyle('out')}>
+                    <MainProductVisual product={outgoingProduct} />
+                  </div>
+                )}
+                {incomingProduct && incomingProduct.key !== outgoingProduct?.key && (
+                  <div key={incomingProduct.key} style={layerStyle('in')}>
+                    <MainProductVisual product={incomingProduct} />
+                  </div>
+                )}
               </div>
 
               {/* Arrows below the large image */}
@@ -363,9 +577,6 @@ const MobileShop: React.FC = () => {
                 </div>
               </div>
 
-              {/* Description */}
-              <p className={`text-[12px] leading-snug line-clamp-3 ${textSub}`}>{desc || shownActive.name}</p>
-
               {/* Price */}
               <div className="flex items-baseline gap-2">
                 <span className={`text-xl font-black ${textMain}`}>₱{shownActive.price.toLocaleString()}</span>
@@ -403,6 +614,14 @@ const MobileShop: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Temporary fly layer: ang produktong lumilipad mula sa sidebar papuntang main */}
+        {fly && (
+          <div style={flyStyle()}>
+            <MainProductVisual product={fly.product} />
+          </div>
+        )}
+        </>
       ) : (
         <div className="px-4 py-16 text-center">
           <p className={`text-sm ${textSub}`}>No products found for "{searchQuery}".</p>
@@ -421,20 +640,12 @@ const MobileShop: React.FC = () => {
               </button>
             </div>
             <div className="no-scrollbar overflow-y-auto max-h-[46vh]" style={{ scrollbarWidth: 'none' }}>
-              <button
-                onClick={() => pickTile('all')}
-                className={`w-full text-left px-4 py-3 rounded-xl text-sm font-bold cursor-pointer transition-all ${
-                  sel === 'all' ? 'bg-indigo-600 text-white' : 'text-stone-800 hover:bg-stone-50'
-                }`}
-              >
-                All Products
-              </button>
               {shopTiles.map((t) => (
                 <button
                   key={t.label}
                   onClick={() => pickTile(t)}
                   className={`w-full text-left px-4 py-3 rounded-xl text-sm font-bold cursor-pointer transition-all ${
-                    sel !== 'all' && sel.label === t.label ? 'bg-indigo-600 text-white' : 'text-stone-800 hover:bg-stone-50'
+                    sel.label === t.label ? 'bg-indigo-600 text-white' : 'text-stone-800 hover:bg-stone-50'
                   }`}
                 >
                   {t.label}

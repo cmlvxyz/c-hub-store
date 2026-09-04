@@ -16,6 +16,15 @@ export interface CategoryData {
   }[]>;
 }
 
+// Parehong pagkasunod ng kulay sa mobile at desktop.
+// Uunahin ang White (kung mayroon), sundan ng natural order ng data.
+export function withWhiteFirst<T extends { colorName: string }>(arr: T[]): T[] {
+  const whiteIdx = arr.findIndex((p) => p.colorName.toLowerCase() === 'white');
+  if (whiteIdx <= 0) return arr;
+  const w = arr[whiteIdx];
+  return [w, ...arr.slice(0, whiteIdx), ...arr.slice(whiteIdx + 1)];
+}
+
 // Complete Product Registry matching the original C-HUB HTML & JS files
 export const PRODUCTS_CONFIG: Record<string, Record<GenderType, CategoryData>> = {
   clothes: {

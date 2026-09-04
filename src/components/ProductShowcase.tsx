@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, type Variants } from 'motion/react';
 import { useStore } from '../context/StoreContext';
-import { PRODUCTS_CONFIG } from '../data/products';
+import { PRODUCTS_CONFIG, withWhiteFirst } from '../data/products';
 import { ProductVisual } from './ProductVisual';
 import { 
   ChevronLeft, 
@@ -46,7 +46,7 @@ export const ProductShowcase: React.FC = () => {
     ? subCategory
     : categoryConfig.defaultSubCategory;
 
-  const currentProducts = categoryConfig.products[currentSubCategory] || [];
+  const currentProducts = withWhiteFirst(categoryConfig.products[currentSubCategory] || []);
   const activeProduct = currentProducts[currentProductIndex] || currentProducts[0];
 
   const defaultSizes = ['XL', '2XL', '3XL', '4XL'];
