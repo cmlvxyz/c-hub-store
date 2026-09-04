@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
 import { 
-  Package, Clock, ShoppingBag, ArrowRight, Truck, CheckCircle2, 
-  Star, XCircle, MapPin, User, Calendar, ThumbsUp, MessageCircle,
-  CreditCard, Shield, AlertCircle, Send, Edit2, Trash2
+  Package, ShoppingBag, ArrowRight, Truck, CheckCircle2, 
+  Star, XCircle, MapPin, User,
+  CreditCard, AlertCircle, Send, Edit2, Trash2, Store, 
+  RefreshCcw, Box, Banknote
 } from 'lucide-react';
 import { ProductVisual } from './ProductVisual';
-import { OrderStatus, Order, Review } from '../types';
+import { OrderStatus, Order } from '../types';
 import { API_SERVER_URL } from '../service/api';
 
 const SERVER_URL = API_SERVER_URL;
@@ -22,13 +23,31 @@ type StatusConfig = {
   nextStatus?: OrderStatus;
 };
 
-const statusConfigs: Record<OrderStatus, StatusConfig> = {
+const statusConfigs: Record<OrderStatus | 'All', StatusConfig> = {
+  'All': {
+    label: 'All',
+    icon: <Box className="w-3.5 h-3.5" />,
+    color: 'text-indigo-600 dark:text-indigo-400',
+    bgColor: 'bg-indigo-100 dark:bg-indigo-950/40',
+    step: 1,
+    description: 'All your orders.',
+    nextStatus: 'To Pay'
+  },
+  'Order': {
+    label: 'Order',
+    icon: <ShoppingBag className="w-3.5 h-3.5" />,
+    color: 'text-slate-600 dark:text-slate-300',
+    bgColor: 'bg-slate-100 dark:bg-slate-800',
+    step: 1,
+    description: 'Order placed successfully.',
+    nextStatus: 'To Pay'
+  },
   'To Pay': {
     label: 'To Pay',
     icon: <CreditCard className="w-3.5 h-3.5" />,
     color: 'text-red-600 dark:text-red-400',
     bgColor: 'bg-red-100 dark:bg-red-950/40',
-    step: 1,
+    step: 2,
     description: 'Please complete your payment to proceed.',
     nextStatus: 'To Ship'
   },
@@ -37,35 +56,17 @@ const statusConfigs: Record<OrderStatus, StatusConfig> = {
     icon: <Package className="w-3.5 h-3.5" />,
     color: 'text-amber-600 dark:text-amber-400',
     bgColor: 'bg-amber-100 dark:bg-amber-950/40',
-    step: 2,
+    step: 3,
     description: 'Seller is preparing your order for shipment.',
-    nextStatus: 'Shipped'
+    nextStatus: 'To Receive'
   },
-  'Shipped': {
-    label: 'Shipped',
+  'To Receive': {
+    label: 'To Receive',
     icon: <Truck className="w-3.5 h-3.5" />,
     color: 'text-blue-600 dark:text-blue-400',
     bgColor: 'bg-blue-100 dark:bg-blue-950/40',
-    step: 3,
-    description: 'Your package has been picked up by the courier.',
-    nextStatus: 'Out for Delivery'
-  },
-  'Out for Delivery': {
-    label: 'Out for Delivery',
-    icon: <MapPin className="w-3.5 h-3.5" />,
-    color: 'text-purple-600 dark:text-purple-400',
-    bgColor: 'bg-purple-100 dark:bg-purple-950/40',
     step: 4,
-    description: 'Your package is with the courier and on its way.',
-    nextStatus: 'Delivered'
-  },
-  'Delivered': {
-    label: 'Delivered',
-    icon: <CheckCircle2 className="w-3.5 h-3.5" />,
-    color: 'text-emerald-600 dark:text-emerald-400',
-    bgColor: 'bg-emerald-100 dark:bg-emerald-950/40',
-    step: 5,
-    description: 'Your package has been delivered! Please review your order.',
+    description: 'Your package is on its way. Wait for delivery.',
     nextStatus: 'To Review'
   },
   'To Review': {
@@ -73,7 +74,7 @@ const statusConfigs: Record<OrderStatus, StatusConfig> = {
     icon: <Star className="w-3.5 h-3.5" />,
     color: 'text-yellow-600 dark:text-yellow-400',
     bgColor: 'bg-yellow-100 dark:bg-yellow-950/40',
-    step: 6,
+    step: 5,
     description: 'Share your experience with this product!',
     nextStatus: 'Completed'
   },
@@ -82,7 +83,7 @@ const statusConfigs: Record<OrderStatus, StatusConfig> = {
     icon: <CheckCircle2 className="w-3.5 h-3.5" />,
     color: 'text-green-600 dark:text-green-400',
     bgColor: 'bg-green-100 dark:bg-green-950/40',
-    step: 7,
+    step: 6,
     description: 'Thank you for your order and review!',
   },
   'Cancelled': {
@@ -116,9 +117,17 @@ const getStatusConfig = (status: OrderStatus | string | undefined): StatusConfig
   };
 };
 
+// ✅ Online vs COD payment detection
+const isOnlinePayment = (payment?: string): boolean => {
+  if (!payment) return false;
+  const p = payment.trim().toLowerCase();
+  return p !== 'cash on delivery' && !p.includes('cod');
+};
+
 // ✅ Status Progress Bar Component
-const StatusProgress: React.FC<{ currentStatus: OrderStatus | string }> = ({ currentStatus }) => {
-  const steps: OrderStatus[] = ['To Pay', 'To Ship', 'Shipped', 'Out for Delivery', 'Delivered', 'To Review', 'Completed'];
+type ProgressStep = OrderStatus | 'All';
+const StatusProgress: React.FC<{ currentStatus: OrderStatus | string; onStepClick?: (step: ProgressStep) => void }> = ({ currentStatus, onStepClick }) => {
+  const steps: ProgressStep[] = ['All', 'To Pay', 'To Ship', 'To Receive', 'To Review'];
   const config = getStatusConfig(currentStatus);
   const currentStep = config?.step || 0;
   
@@ -132,8 +141,9 @@ const StatusProgress: React.FC<{ currentStatus: OrderStatus | string }> = ({ cur
   }
 
   return (
-    <div className="w-full space-y-1.5">
-      <div className="flex items-center justify-between gap-1">
+    <div className="w-full space-y-2">
+      <div className="w-full overflow-x-auto no-scrollbar">
+        <div className="flex items-center justify-between gap-1 min-w-[480px] sm:min-w-0">
         {steps.map((step, idx) => {
           const stepNum = idx + 1;
           const isActive = stepNum <= currentStep;
@@ -142,7 +152,11 @@ const StatusProgress: React.FC<{ currentStatus: OrderStatus | string }> = ({ cur
           
           return (
             <div key={step} className="flex-1 flex items-center">
-              <div className="flex flex-col items-center flex-1">
+              <button
+                type="button"
+                onClick={onStepClick ? () => onStepClick(step) : undefined}
+                className={`flex flex-col items-center flex-1 ${onStepClick ? 'cursor-pointer' : ''}`}
+              >
                 <div 
                   className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-300 ${
                     isActive 
@@ -158,12 +172,12 @@ const StatusProgress: React.FC<{ currentStatus: OrderStatus | string }> = ({ cur
                     stepNum
                   )}
                 </div>
-                <span className={`text-[8px] mt-0.5 font-medium text-center truncate w-full ${
-                  isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-stone-400 dark:text-stone-500'
+                <span className={`text-[9px] mt-1 font-semibold text-center whitespace-nowrap ${
+                  isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-stone-500 dark:text-stone-400'
                 }`}>
-                  {stepConfig.label.split(' ')[0]}
+                  {step === 'All' ? 'All' : step}
                 </span>
-              </div>
+              </button>
               {idx < steps.length - 1 && (
                 <div className={`flex-1 h-0.5 mx-0.5 ${
                   isActive ? 'bg-indigo-500' : 'bg-stone-200 dark:bg-stone-700'
@@ -172,6 +186,7 @@ const StatusProgress: React.FC<{ currentStatus: OrderStatus | string }> = ({ cur
             </div>
           );
         })}
+        </div>
       </div>
       <p className="text-[10px] text-stone-500 dark:text-stone-400 text-center">
         {config?.description || ''}
@@ -180,96 +195,187 @@ const StatusProgress: React.FC<{ currentStatus: OrderStatus | string }> = ({ cur
   );
 };
 
-// ✅ Review Modal Component
-const ReviewModal: React.FC<{
+// ✅ Delivery / Review Modal Component
+const DeliveryModal: React.FC<{
   order: Order;
   onClose: () => void;
-  onSubmit: (orderId: string, rating: number, comment: string) => void;
-}> = ({ order, onClose, onSubmit }) => {
+  onRate: (orderId: string, rating: number, comment: string) => void;
+}> = ({ order, onClose, onRate }) => {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = () => {
-    if (rating === 0) {
-      alert('Please select a rating!');
-      return;
-    }
-    onSubmit(order.orderId, rating, comment);
+    if (rating === 0) return;
+    setSubmitting(true);
+    onRate(order.orderId, rating, comment);
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fadeIn p-4">
-      <div className="bg-white dark:bg-stone-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-stone-200 dark:border-stone-800">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold font-serif text-stone-900 dark:text-white">
-            Rate Your Order
-          </h3>
-          <button onClick={onClose} className="text-stone-400 hover:text-stone-600">
-            <XCircle className="w-5 h-5" />
-          </button>
+      <div className="bg-white dark:bg-stone-900 rounded-3xl max-w-md w-full max-h-[85vh] overflow-y-auto shadow-2xl border border-stone-200 dark:border-stone-800">
+        {/* Header */}
+        <div className="p-5 border-b border-stone-100 dark:border-stone-800">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+              <Truck className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-stone-900 dark:text-white">
+                {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+              </p>
+              <p className="text-xs text-emerald-600 font-semibold">Delivered</p>
+            </div>
+          </div>
+          <p className="text-sm text-stone-500 dark:text-stone-400">Your Package has been delivered</p>
         </div>
 
-        <p className="text-sm text-stone-600 dark:text-stone-400 mb-4">
-          How was your experience with <b>{order.orderId}</b>?
-        </p>
-
-        <div className="flex justify-center gap-2 mb-4">
-          {[1, 2, 3, 4, 5].map((star) => (
-            <button
-              key={star}
-              onMouseEnter={() => setHoverRating(star)}
-              onMouseLeave={() => setHoverRating(0)}
-              onClick={() => setRating(star)}
-              className="transition-all hover:scale-110"
-            >
-              <Star
-                className={`w-10 h-10 ${
-                  star <= (hoverRating || rating)
-                    ? 'fill-yellow-400 text-yellow-400'
-                    : 'text-stone-300 dark:text-stone-600'
-                } transition-colors`}
-              />
-            </button>
+        {/* Product Items */}
+        <div className="p-5 space-y-3 border-b border-stone-100 dark:border-stone-800">
+          {order.items.map((item, idx) => (
+            <div key={idx} className="flex items-center gap-3">
+              <div className="w-14 h-14 rounded-xl bg-stone-100 dark:bg-stone-800 flex items-center justify-center p-1 shrink-0">
+                <ProductVisual
+                  category="clothes"
+                  subCategory={item.subCategory || 'tshirt'}
+                  colorName={item.color || 'White'}
+                  bgColor="#2A3459"
+                  name={item.name}
+                  image={item.image}
+                  className="w-12 h-12 object-contain"
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm text-stone-900 dark:text-white font-serif truncate">{item.name}</p>
+                <p className="text-xs text-stone-400">{item.color || 'White'}, {item.size || 'M'} • x{item.qty}</p>
+              </div>
+              <p className="font-bold text-sm text-stone-900 dark:text-white font-serif shrink-0">
+                ₱{(item.price * item.qty).toLocaleString()}
+              </p>
+            </div>
           ))}
         </div>
 
-        <p className="text-center text-sm text-stone-500 mb-4">
-          {rating === 1 && '😞 Poor'}
-          {rating === 2 && '😕 Fair'}
-          {rating === 3 && '😐 Good'}
-          {rating === 4 && '😊 Very Good'}
-          {rating === 5 && '🌟 Excellent!'}
-          {rating === 0 && 'Tap a star to rate'}
-        </p>
+        {/* Total */}
+        <div className="px-5 py-3 flex items-center justify-between bg-stone-50 dark:bg-stone-800/50">
+          <span className="text-sm font-medium text-stone-500">Total</span>
+          <span className="text-lg font-black text-stone-900 dark:text-indigo-400 font-serif">₱{order.total.toLocaleString()}</span>
+        </div>
 
-        <textarea
-          placeholder="Share your experience..."
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          rows={3}
-          className="w-full px-4 py-3 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 text-stone-900 dark:text-white resize-none"
-        />
+        {/* Action Buttons */}
+        <div className="p-5 space-y-3">
+          <div className="flex gap-3">
+            <button onClick={onClose} className="flex-1 py-2.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 font-bold text-xs uppercase tracking-wider rounded-xl transition-all text-center">
+              <RefreshCcw className="w-3.5 h-3.5 inline mr-1" /> Request Refund
+            </button>
+            <button onClick={onClose} className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all text-center">
+              <Edit2 className="w-3.5 h-3.5 inline mr-1" /> Write Review
+            </button>
+          </div>
 
-        <button
-          onClick={handleSubmit}
-          className="w-full mt-4 py-3 bg-yellow-500 hover:bg-yellow-600 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2"
-        >
-          <Send className="w-4 h-4" />
-          Submit Review
-        </button>
+          {/* Quick Review */}
+          <div className="p-4 rounded-xl bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-900">
+            <p className="text-xs font-bold text-stone-600 dark:text-stone-300 mb-2">Quick Review</p>
+            <div className="flex justify-center gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onMouseEnter={() => setHoverRating(star)}
+                  onMouseLeave={() => setHoverRating(0)}
+                  onClick={() => setRating(star)}
+                  className="transition-all hover:scale-110"
+                >
+                  <Star
+                    className={`w-8 h-8 ${
+                      star <= (hoverRating || rating)
+                        ? 'fill-yellow-400 text-yellow-400'
+                        : 'text-stone-300 dark:text-stone-600'
+                    } transition-colors`}
+                  />
+                </button>
+              ))}
+            </div>
+            <p className="text-center text-xs text-stone-500 mt-1">
+              {rating === 0 && 'Tap a star to rate'}
+              {rating === 1 && '😞 Poor'}
+              {rating === 2 && '😕 Fair'}
+              {rating === 3 && '😐 Good'}
+              {rating === 4 && '😊 Very Good'}
+              {rating === 5 && '🌟 Excellent!'}
+            </p>
+          </div>
+
+          <textarea
+            placeholder="Write your review..."
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            rows={2}
+            className="w-full px-3 py-2 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 text-stone-900 dark:text-white resize-none"
+          />
+
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 font-bold text-xs uppercase tracking-wider rounded-xl transition-all"
+            >
+              Close
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={rating === 0 || submitting}
+              className="flex-1 py-2.5 bg-yellow-500 hover:bg-yellow-600 disabled:bg-stone-300 dark:disabled:bg-stone-700 text-white disabled:text-stone-500 font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2"
+            >
+              <Send className="w-3.5 h-3.5" />
+              Submit Review
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
+// ✅ Tab definitions
+type OrderTab = 'ALL' | 'TO PAY' | 'TO SHIP' | 'TO RECEIVE' | 'TO REVIEW' | 'COMPLETED';
+
 export const OrdersPage: React.FC = () => {
   const { orders, user, setPage, showToast, updateOrderStatus, loadUserOrders, refreshOrders, isLoading, ordersUpdated, syncOrdersToServer } = useStore();
-  const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<OrderTab>('ALL');
   const [reviewingOrder, setReviewingOrder] = useState<Order | null>(null);
   const [localOrders, setLocalOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletedOrderIds, setDeletedOrderIds] = useState<Set<string>>(new Set());
+
+  // ✅ Handle step click in status progress bar
+  const handleStepClick = (order: Order, step: ProgressStep) => {
+    if (step === 'To Review') {
+      setReviewingOrder(order);
+      return;
+    }
+    // Auto-advance: find next status
+    const currentConfig = getStatusConfig(order.status);
+    const next = currentConfig?.nextStatus;
+    if (!next) return;
+    if (next === 'To Review') {
+      updateOrderStatus(order.orderId, next);
+      setReviewingOrder(order);
+      return;
+    }
+    updateOrderStatus(order.orderId, next);
+  };
+
+  // ✅ Handle stepper click: acts as an order filter (clickable step navigation)
+  const handleFilterClick = (step: ProgressStep) => {
+    switch (step) {
+      case 'All': setActiveTab('ALL'); break;
+      case 'To Pay': setActiveTab('TO PAY'); break;
+      case 'To Ship': setActiveTab('TO SHIP'); break;
+      case 'To Receive': setActiveTab('TO RECEIVE'); break;
+      case 'To Review': setActiveTab('TO REVIEW'); break;
+      default: break;
+    }
+  };
 
   // ✅ SSE connection para sa real-time updates
   useEffect(() => {
@@ -293,52 +399,34 @@ export const OrdersPage: React.FC = () => {
         console.warn('⚠️ SSE error (OrdersPage):', error);
       };
       
-      // ✅ ORDER UPDATE EVENT - auto-update ng orders
       es.addEventListener('order-updated', (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('📦 order_update received (OrdersPage):', data);
-          
           const { orderId, status, order } = data;
-          
           if (!orderId) return;
           if (!user.isLoggedIn || !user.username) return;
           
-          // ✅ I-update ang local orders
           setLocalOrders(prev => {
             const exists = prev.some(o => o.orderId === orderId);
-            
             if (order) {
-              // Kung may full order object, gamitin ito
+              const key = `chub_orders_${user.username.toLowerCase()}`;
               if (!exists) {
-                // Bago - idagdag
                 const newOrders = [order, ...prev];
-                // I-save sa localStorage
-                const key = `chub_orders_${user.username.toLowerCase()}`;
                 localStorage.setItem(key, JSON.stringify(newOrders));
                 return newOrders;
               } else {
-                // Existing - i-update
-                const updatedOrders = prev.map(o =>
-                  o.orderId === orderId ? { ...o, ...order } : o
-                );
-                const key = `chub_orders_${user.username.toLowerCase()}`;
+                const updatedOrders = prev.map(o => o.orderId === orderId ? { ...o, ...order } : o);
                 localStorage.setItem(key, JSON.stringify(updatedOrders));
                 return updatedOrders;
               }
             }
-            
-            // Kung walang order object, status lang ang nagbago
             if (exists) {
-              const updatedOrders = prev.map(o =>
-                o.orderId === orderId ? { ...o, status: status as Order['status'] } : o
-              );
+              const updatedOrders = prev.map(o => o.orderId === orderId ? { ...o, status: status as Order['status'] } : o);
               const key = `chub_orders_${user.username.toLowerCase()}`;
               localStorage.setItem(key, JSON.stringify(updatedOrders));
               showToast(`Order ${orderId} is now ${status}`, 'success');
               return updatedOrders;
             }
-            
             return prev;
           });
         } catch (e) {
@@ -346,15 +434,10 @@ export const OrdersPage: React.FC = () => {
         }
       });
       
-      // ✅ NEW ORDER EVENT
       es.addEventListener('new-order', (event: MessageEvent) => {
         try {
           const newOrder = JSON.parse(event.data) as Order;
-          console.log('📦 new_order received (OrdersPage):', newOrder);
-          
           if (!user.isLoggedIn || !user.username) return;
-          
-          // ✅ I-check kung para sa user na ito
           if (newOrder.customer?.name?.toLowerCase() === user.username.toLowerCase()) {
             setLocalOrders(prev => {
               if (prev.some(o => o.orderId === newOrder.orderId)) return prev;
@@ -370,26 +453,18 @@ export const OrdersPage: React.FC = () => {
         }
       });
       
-      // ✅ ORDER DELETED EVENT
       es.addEventListener('order-deleted', (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('🗑️ order_deleted received (OrdersPage):', data);
-          
           const { orderId } = data;
           if (!orderId) return;
           if (!user.isLoggedIn || !user.username) return;
-          
-          // ✅ Tanggalin ang order mula sa local state
           setLocalOrders(prev => {
             const filtered = prev.filter(o => o.orderId !== orderId);
             const key = `chub_orders_${user.username.toLowerCase()}`;
             localStorage.setItem(key, JSON.stringify(filtered));
-            showToast(`Order ${orderId} has been deleted`, 'info');
             return filtered;
           });
-          
-          // ✅ Idagdag sa deleted set
           setDeletedOrderIds(prev => new Set([...prev, orderId]));
         } catch (e) {
           console.error('❌ Bad order_deleted (OrdersPage):', e);
@@ -411,42 +486,59 @@ export const OrdersPage: React.FC = () => {
   // ✅ Load orders from localStorage
   useEffect(() => {
     if (user.isLoggedIn && user.username) {
-      console.log('🔄 OrdersPage: Loading orders for:', user.username);
-      
       try {
         const key = `chub_orders_${user.username.toLowerCase()}`;
         const saved = localStorage.getItem(key);
-        console.log('📦 Raw data from localStorage:', saved);
-        
         if (saved) {
           const parsed = JSON.parse(saved);
           const filtered = parsed.filter((o: Order) => !deletedOrderIds.has(o.orderId));
-          console.log('📦 Filtered orders (deleted removed):', filtered.length);
           setLocalOrders(filtered);
         } else {
-          console.log('❌ No orders found in localStorage');
           setLocalOrders([]);
         }
       } catch (e) {
         console.error('Failed to load orders:', e);
         setLocalOrders([]);
       }
-      
       loadUserOrders();
     } else {
-      console.log('👤 User not logged in');
       setLocalOrders([]);
     }
     setLoading(false);
   }, [user.isLoggedIn, user.username, ordersUpdated, deletedOrderIds]);
 
   // ✅ Use localOrders if available, otherwise use orders from store
-  const displayOrders = (localOrders.length > 0 ? localOrders : orders)
+  const allOrders = (localOrders.length > 0 ? localOrders : orders)
     .filter((o: Order) => !deletedOrderIds.has(o.orderId));
 
-  const toggleOrderExpand = (orderId: string) => {
-    setExpandedOrder(expandedOrder === orderId ? null : orderId);
+  // ✅ Helper: is a given timestamp within the last 24 hours?
+  const isWithin24h = (ts?: string): boolean => {
+    if (!ts) return false;
+    const t = new Date(ts).getTime();
+    if (isNaN(t)) return false;
+    return Date.now() - t <= 24 * 60 * 60 * 1000;
   };
+
+  // ✅ Filter orders based on active tab (Progress Stepper)
+  const filteredOrders = (() => {
+    if (activeTab === 'ALL') return allOrders;
+    if (activeTab === 'TO PAY') return allOrders.filter(o => o.status === 'To Pay');
+    if (activeTab === 'TO SHIP') return allOrders.filter(o => o.status === 'To Ship');
+    if (activeTab === 'TO RECEIVE') return allOrders.filter(o => o.status === 'To Receive');
+    if (activeTab === 'TO REVIEW') {
+      // To Review status always eligible + Completed orders within 24h that aren't reviewed yet
+      return allOrders.filter(o =>
+        o.status === 'To Review' ||
+        (o.status === 'Completed' && !o.review && isWithin24h(o.updatedAt))
+      );
+    }
+    if (activeTab === 'COMPLETED') return allOrders.filter(o => o.status === 'Completed');
+    return allOrders;
+  })();
+
+  // ✅ Progress Stepper reflects the first displayed order's status (or stays neutral when empty)
+  const navOrder = [...filteredOrders, ...allOrders].find(o => o.status !== 'Cancelled');
+  const navStatus = (navOrder?.status || 'All') as OrderStatus;
 
   // ✅ Handle review submission
   const handleSubmitReview = (orderId: string, rating: number, comment: string) => {
@@ -457,7 +549,7 @@ export const OrdersPage: React.FC = () => {
         orderId,
         rating,
         comment,
-        customerName: displayOrders.find(o => o.orderId === orderId)?.customer?.name || user.username || '',
+        customerName: allOrders.find(o => o.orderId === orderId)?.customer?.name || user.username || '',
         date: new Date().toISOString()
       })
     })
@@ -467,13 +559,6 @@ export const OrdersPage: React.FC = () => {
       showToast('⭐ Thank you for your review!', 'success');
       updateOrderStatus(orderId, 'Completed');
       setReviewingOrder(null);
-      // ✅ I-reload ang orders
-      const key = `chub_orders_${user.username.toLowerCase()}`;
-      const saved = localStorage.getItem(key);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setLocalOrders(parsed.filter((o: Order) => !deletedOrderIds.has(o.orderId)));
-      }
     })
     .catch(err => {
       console.error('Failed to submit review:', err);
@@ -481,52 +566,33 @@ export const OrdersPage: React.FC = () => {
     });
   };
 
-  // ✅ Status badge component
-  const getStatusBadge = (status: OrderStatus | string | undefined) => {
-    const config = getStatusConfig(status);
-    return (
-      <span className={`px-3 py-1 rounded-full font-bold text-xs flex items-center gap-1.5 ${config.bgColor} ${config.color}`}>
-        {config.icon}
-        {config.label}
-      </span>
-    );
+  // ✅ Handle Cancel Order
+  const handleCancelOrder = (orderId: string) => {
+    if (!window.confirm('Are you sure you want to cancel this order?')) return;
+    updateOrderStatus(orderId, 'Cancelled');
   };
 
   // ✅ Handle Delete Order
   const handleDeleteOrder = async (orderId: string) => {
     try {
-      // ✅ 1. I-add sa deleted set para hindi na bumalik
       setDeletedOrderIds(prev => new Set([...prev, orderId]));
-      
-      // ✅ 2. Tanggalin mula sa localStorage
       const key = `chub_orders_${user.username.toLowerCase()}`;
       const saved = localStorage.getItem(key);
       if (saved) {
         const parsed = JSON.parse(saved);
         const filtered = parsed.filter((o: Order) => o.orderId !== orderId);
         localStorage.setItem(key, JSON.stringify(filtered));
-        console.log(`✅ Deleted order ${orderId} from localStorage`);
       }
-      
-      // ✅ 3. I-update ang local state
       setLocalOrders(prev => prev.filter((o: Order) => o.orderId !== orderId));
-      
-      // ✅ 4. I-delete sa server
       try {
-        await fetch(`${SERVER_URL}/api/orders/${orderId}`, {
-          method: 'DELETE'
-        });
-        console.log(`✅ Deleted order ${orderId} from server`);
+        await fetch(`${SERVER_URL}/api/orders/${orderId}`, { method: 'DELETE' });
       } catch (err) {
         console.error('Failed to delete from server:', err);
       }
-      
       showToast(`Order ${orderId} deleted`, 'success');
-      
     } catch (err) {
       console.error('Failed to delete order:', err);
       showToast('Failed to delete order. Please try again.', 'warning');
-      // ✅ Kung nag-fail, alisin sa deleted set
       setDeletedOrderIds(prev => {
         const newSet = new Set(prev);
         newSet.delete(orderId);
@@ -547,6 +613,255 @@ export const OrdersPage: React.FC = () => {
     };
   };
 
+  // ✅ Render all item rows
+  const renderItemRows = (order: Order) => (
+    <div className="space-y-3">
+      {order.items.map((item, idx) => (
+        <div key={idx} className="flex items-center gap-3">
+          <div className="w-14 h-14 rounded-xl bg-stone-100 dark:bg-stone-800 flex items-center justify-center p-1 shrink-0">
+            <ProductVisual
+              category="clothes"
+              subCategory={item.subCategory || 'tshirt'}
+              colorName={item.color || 'White'}
+              bgColor="#2A3459"
+              name={item.name}
+              image={item.image}
+              className="w-12 h-12 object-contain"
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-sm text-stone-900 dark:text-white font-serif truncate">{item.name}</p>
+            <p className="text-xs text-stone-400">
+              {item.color ? `Color: ${item.color}` : ''}{item.color && item.size ? ' • ' : ''}{item.size ? `Size: ${item.size}` : ''} • x{item.qty}
+            </p>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="font-bold text-sm text-stone-900 dark:text-white font-serif">₱{(item.price * item.qty).toLocaleString()}</p>
+            <p className="text-[10px] text-stone-400">₱{item.price.toLocaleString()} each</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  // ✅ Render a single order card by tab context
+  const renderOrderCard = (order: Order) => {
+    const status = order.status as OrderStatus;
+    const statusDisplay = getStatusDisplay(status);
+    const itemCount = order.items.reduce((sum, item) => sum + item.qty, 0);
+    const hasReview = !!order.review;
+    // ✅ Completed order still within the 24-hour review window
+    const inReviewWindow = status === 'Completed' && !hasReview && isWithin24h(order.updatedAt);
+
+    return (
+      <div key={order.orderId} className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm transition-all hover:shadow-md">
+        {/* Top Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-stone-100 dark:border-stone-800">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center text-indigo-600">
+              <Store className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-sm font-black font-serif text-stone-900 dark:text-white">C-HUB Store</p>
+              <p className="text-xs text-stone-500">{order.orderId} • {order.date}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            {statusDisplay.icon}
+            <span className={`font-bold ${statusDisplay.color}`}>{statusDisplay.label}</span>
+            <button
+              onClick={() => handleDeleteOrder(order.orderId)}
+              className="p-1.5 rounded-lg text-stone-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors ml-1"
+              title="Delete Order"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Order Summary - always shown */}
+        <div className="border border-stone-100 dark:border-stone-800 rounded-2xl p-4 space-y-3">
+          {renderItemRows(order)}
+
+          {/* Summary line */}
+          <div className="flex items-center justify-between pt-3 border-t border-stone-100 dark:border-stone-800">
+            <span className="text-xs text-stone-500">{itemCount} {itemCount === 1 ? 'item' : 'items'}</span>
+            <div className="text-right">
+              <span className="text-xs text-stone-500 mr-2">Total</span>
+              <span className="text-lg font-black text-stone-900 dark:text-indigo-400 font-serif">₱{order.total.toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Context-specific sections */}
+        {(status === 'To Pay') && (
+          <div className="mt-4 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900 space-y-2">
+            <p className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">Payment Details</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <p className="text-stone-600 dark:text-stone-300"><span className="text-stone-400">Payment Method: </span>{order.payment}</p>
+              <p className="text-stone-600 dark:text-stone-300"><span className="text-stone-400">Shipping: </span>{order.shipping === 0 ? 'FREE' : `₱${order.shipping.toLocaleString()}`}</p>
+            </div>
+            {isOnlinePayment(order.payment) ? (
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => handleStepClick(order, 'To Pay')}
+                  className="flex-1 py-2.5 bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2"
+                >
+                  <CreditCard className="w-4 h-4" /> Pay Now
+                </button>
+                <button
+                  onClick={() => handleCancelOrder(order.orderId)}
+                  className="flex-1 py-2.5 bg-white dark:bg-stone-800 border border-rose-200 dark:border-rose-800 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-bold text-xs uppercase tracking-wider rounded-xl transition-all"
+                >
+                  Cancel Order
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3 rounded-xl bg-white dark:bg-stone-800 border border-rose-100 dark:border-rose-900 px-4 py-3">
+                <div className="flex items-start gap-2.5">
+                  <Banknote className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Cash on Delivery (COD)</p>
+                    <p className="text-xs text-stone-500 dark:text-stone-400">Pay when you receive your order.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleCancelOrder(order.orderId)}
+                  className="shrink-0 py-2 px-4 bg-white dark:bg-stone-800 border border-rose-200 dark:border-rose-800 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-bold text-xs uppercase tracking-wider rounded-xl transition-all"
+                >
+                  Cancel Order
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {(status === 'To Ship') && (
+          <div className="mt-4 p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900 space-y-2">
+            <p className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">Shipment Info</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <p className="text-stone-600 dark:text-stone-300"><span className="text-stone-400">Payment Status: </span><span className="text-emerald-600 font-bold">Paid</span></p>
+              <p className="text-stone-600 dark:text-stone-300"><span className="text-stone-400">Order Date: </span>{order.date}</p>
+              <p className="text-stone-600 dark:text-stone-300 flex items-start gap-1 sm:col-span-2"><MapPin className="w-3 h-3 mt-0.5 text-stone-400 shrink-0" /> <span><span className="text-stone-400">Shipping Address: </span>{order.customer.address}</span></p>
+              <p className="text-stone-600 dark:text-stone-300"><span className="text-stone-400">Seller: </span>C-HUB Store</p>
+              <p className="text-stone-600 dark:text-stone-300"><span className="text-stone-400">Status: </span>Preparing to Ship</p>
+            </div>
+            <button
+              disabled
+              title="Cancellation is not available once the order is being shipped"
+              className="w-full py-2.5 bg-white dark:bg-stone-800 border border-amber-200 dark:border-amber-800 text-amber-300 dark:text-amber-600 font-bold text-xs uppercase tracking-wider rounded-xl cursor-not-allowed opacity-70"
+            >
+              Cancel Order
+            </button>
+            <p className="text-[11px] text-stone-400 dark:text-stone-500 flex items-center gap-1.5">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              Your order is being prepared for shipment. You'll get tracking details once it ships.
+            </p>
+          </div>
+        )}
+
+        {(status === 'To Receive') && (
+          <div className="mt-4 p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900 space-y-3">
+            <p className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">Tracking</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <p className="text-stone-600 dark:text-stone-300"><span className="text-stone-400">Courier: </span>{order.fulfillment?.carrier || 'J&T Express'}</p>
+              <p className="text-stone-600 dark:text-stone-300"><span className="text-stone-400">Tracking #: </span>{order.fulfillment?.trackingNumber || 'N/A'}</p>
+              <p className="text-stone-600 dark:text-stone-300 sm:col-span-2"><span className="text-stone-400">Estimated Delivery: </span>{order.fulfillment?.estimatedDelivery || 'Within 2-5 days'}</p>
+            </div>
+            <div className="flex gap-2">
+              <button className="flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2">
+                <Truck className="w-4 h-4" /> Track Package
+              </button>
+              <button
+                onClick={() => handleStepClick(order, 'To Receive')}
+                className="flex-1 py-2.5 bg-white dark:bg-stone-800 border border-blue-200 dark:border-blue-800 text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/40 font-bold text-xs uppercase tracking-wider rounded-xl transition-all"
+              >
+                Order Received
+              </button>
+            </div>
+          </div>
+        )}
+
+        {(status === 'To Review') && (
+          <div className="mt-4 p-4 rounded-2xl bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-100 dark:border-yellow-900 space-y-3">
+            <p className="text-xs font-bold uppercase tracking-wider text-yellow-600 dark:text-yellow-400">Review This Order</p>
+            <div className="flex items-center gap-3 text-xs">
+              <Star className="w-4 h-4 text-yellow-500 fill-yellow-400 shrink-0" />
+              <p className="text-stone-600 dark:text-stone-300">You've received your order. Share your experience!</p>
+            </div>
+            <button
+              onClick={() => setReviewingOrder(order)}
+              className="w-full py-2.5 bg-yellow-500 hover:bg-yellow-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2"
+            >
+              <Star className="w-4 h-4" /> Write Review
+            </button>
+          </div>
+        )}
+
+        {(status === 'Completed') && (
+          <div className="mt-4 p-4 rounded-2xl bg-green-50 dark:bg-green-950/20 border border-green-100 dark:border-green-900 space-y-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-green-600" />
+              <p className="text-xs font-bold text-green-700 dark:text-green-400">Order Completed</p>
+            </div>
+
+            {hasReview && order.review ? (
+              <div className="p-3 rounded-xl bg-white dark:bg-stone-800 border border-green-100 dark:border-green-900">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="flex">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star key={star} className={`w-3.5 h-3.5 ${star <= (order.review?.rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-stone-300'}`} />
+                    ))}
+                  </div>
+                  <span className="text-xs text-stone-500">{order.review?.date ? new Date(order.review.date).toLocaleDateString() : ''}</span>
+                </div>
+                {order.review?.comment && <p className="text-xs text-stone-600 dark:text-stone-300">{order.review.comment}</p>}
+              </div>
+            ) : (
+              <>
+                {inReviewWindow ? (
+                  <>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setReviewingOrder(order)}
+                        className="flex-1 py-2.5 bg-white dark:bg-stone-800 border border-green-200 dark:border-green-800 text-green-700 hover:bg-green-50 dark:hover:bg-green-950/40 font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2"
+                      >
+                        <RefreshCcw className="w-4 h-4" /> Request Refund
+                      </button>
+                      <button
+                        onClick={() => setReviewingOrder(order)}
+                        className="flex-1 py-2.5 bg-yellow-500 hover:bg-yellow-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2"
+                      >
+                        <Star className="w-4 h-4" /> Write Review
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-stone-400 text-center">
+                      Available for review within 24 hours of delivery.
+                    </p>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setReviewingOrder(order)}
+                    className="w-full py-2.5 bg-yellow-500 hover:bg-yellow-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2"
+                  >
+                    <Star className="w-4 h-4" /> Write Review
+                  </button>
+                )}
+              </>
+            )}
+
+            <button
+              onClick={() => setPage('shop')}
+              className="w-full py-2.5 bg-white dark:bg-stone-800 border border-green-200 dark:border-green-800 text-green-700 hover:bg-green-50 dark:hover:bg-green-950/40 font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2"
+            >
+              <ShoppingBag className="w-4 h-4" /> Buy Again
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // ✅ Show loading state
   if (loading || isLoading) {
     return (
@@ -565,9 +880,7 @@ export const OrdersPage: React.FC = () => {
           <User className="w-10 h-10" />
         </div>
         <div className="space-y-2">
-          <h2 className="text-3xl font-extrabold font-serif text-stone-900 dark:text-white">
-            Please Login
-          </h2>
+          <h2 className="text-3xl font-extrabold font-serif text-stone-900 dark:text-white">Please Login</h2>
           <p className="text-sm text-stone-500 dark:text-stone-400 max-w-md mx-auto leading-relaxed">
             Login to view your order history and track your purchases.
           </p>
@@ -582,32 +895,6 @@ export const OrdersPage: React.FC = () => {
     );
   }
 
-  if (displayOrders.length === 0) {
-    return (
-      <div className="w-full max-w-7xl mx-auto px-4 py-16 text-center space-y-6 animate-fadeIn">
-        <div className="w-20 h-20 mx-auto rounded-3xl bg-stone-100 dark:bg-stone-800 text-stone-400 flex items-center justify-center text-3xl shadow-inner">
-          <Package className="w-10 h-10" />
-        </div>
-        <div className="space-y-2">
-          <h2 className="text-3xl font-extrabold font-serif text-stone-900 dark:text-white">
-            No Orders Yet
-          </h2>
-          <p className="text-sm text-stone-500 dark:text-stone-400 max-w-md mx-auto leading-relaxed">
-            You haven't placed any orders with C-HUB yet. Start exploring our collections to create your signature look.
-          </p>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <button
-            onClick={() => setPage('shop')}
-            className="px-8 py-3.5 bg-stone-900 hover:bg-stone-800 text-white dark:bg-indigo-500 dark:hover:bg-indigo-600 dark:text-white font-bold text-xs uppercase tracking-wider rounded-full transition-all shadow-xl hover:scale-105"
-          >
-            Explore Shop
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-8 animate-fadeIn">
       
@@ -615,10 +902,10 @@ export const OrdersPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-stone-200 dark:border-stone-800">
         <div>
           <span className="text-xs uppercase font-extrabold tracking-[0.25em] text-indigo-600 dark:text-indigo-400">
-            Account History
+            My Purchases
           </span>
           <h1 className="text-3xl sm:text-4xl font-black font-serif text-stone-900 dark:text-white">
-            Your Orders ({displayOrders.length})
+            Your Orders
           </h1>
         </div>
         <button
@@ -630,259 +917,46 @@ export const OrdersPage: React.FC = () => {
         </button>
       </div>
 
-      {/* Orders List */}
-      <div className="space-y-6">
-        {displayOrders.map((order) => {
-          const status = order.status as OrderStatus;
-          const statusConfig = getStatusConfig(status);
-          const statusDisplay = getStatusDisplay(status);
-          const isExpanded = expandedOrder === order.orderId;
-          const itemCount = order.items.reduce((sum, item) => sum + item.qty, 0);
-          const hasReview = !!order.review;
-          const timeline = order.fulfillment?.timeline || [];
-
-          return (
-            <div
-              key={order.orderId}
-              className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm transition-all hover:shadow-md"
-            >
-              {/* Top Bar */}
-              <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-stone-100 dark:border-stone-800">
-                <div className="space-y-1">
-                  <p className="text-xs text-stone-500 font-medium">Order Number</p>
-                  <p className="text-lg font-black font-mono text-stone-900 dark:text-indigo-400">{order.orderId}</p>
-                </div>
-
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="text-stone-500">{order.date}</span>
-                  {getStatusBadge(status)}
-                  
-                  {/* Delete Icon */}
-                  <button
-                    onClick={() => handleDeleteOrder(order.orderId)}
-                    className="p-1.5 rounded-lg text-stone-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-                    title="Delete Order"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Status Progress Bar */}
-              <div className="py-4">
-                <StatusProgress currentStatus={status} />
-              </div>
-
-              {/* Status Info */}
-              <div className="flex items-center justify-between p-4 rounded-xl bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700">
-                <div className="flex items-center gap-3">
-                  <span className={statusDisplay.color}>
-                    {statusDisplay.icon}
-                  </span>
-                  <div>
-                    <p className="text-sm font-semibold text-stone-900 dark:text-white">
-                      {statusDisplay.label}
-                    </p>
-                    <p className="text-xs text-stone-500 dark:text-stone-400">
-                      {statusDisplay.description}
-                    </p>
-                  </div>
-                </div>
-                {timeline.length > 0 && (
-                  <span className="text-xs text-stone-400">
-                    {timeline[timeline.length - 1]?.time || ''}
-                  </span>
-                )}
-              </div>
-
-              {/* Timeline Events */}
-              {timeline.length > 0 && (
-                <div className="mb-4 space-y-2 px-2">
-                  <div className="space-y-2">
-                    {timeline.slice().reverse().map((event: { status: string; time: string; note?: string }, idx: number) => (
-                      <div key={idx} className="flex items-start gap-3 text-xs">
-                        <div className="w-2 h-2 rounded-full bg-indigo-500 mt-1.5 shrink-0" />
-                        <div>
-                          <span className="font-medium text-stone-700 dark:text-stone-300">{event.status}</span>
-                          <span className="text-stone-400 ml-2">{event.time}</span>
-                          {event.note && (
-                            <p className="text-stone-500 text-[11px]">{event.note}</p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Order Items Summary */}
-              <div 
-                className="flex items-center justify-between cursor-pointer py-2 mt-2"
-                onClick={() => toggleOrderExpand(order.orderId)}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex -space-x-2">
-                    {order.items.slice(0, 3).map((item, idx) => (
-                      <div key={idx} className="w-10 h-10 rounded-xl bg-stone-100 dark:bg-stone-800 flex items-center justify-center p-1 border-2 border-white dark:border-stone-900">
-                        <ProductVisual
-                          category="clothes"
-                          subCategory={item.subCategory || 'tshirt'}
-                          colorName={item.color || 'White'}
-                          bgColor="#2A3459"
-                          name={item.name}
-                          image={item.image}
-                          className="w-8 h-8 object-contain"
-                        />
-                      </div>
-                    ))}
-                    {order.items.length > 3 && (
-                      <div className="w-10 h-10 rounded-xl bg-stone-200 dark:bg-stone-700 flex items-center justify-center text-xs font-bold text-stone-600 dark:text-stone-300 border-2 border-white dark:border-stone-900">
-                        +{order.items.length - 3}
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-stone-900 dark:text-white">
-                      {order.items.length} {order.items.length === 1 ? 'item' : 'items'} • {itemCount} {itemCount === 1 ? 'piece' : 'pieces'}
-                    </p>
-                    <p className="text-xs text-stone-500">
-                      ₱{order.total.toLocaleString()} total
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-stone-400">
-                    {isExpanded ? 'Hide details' : 'View details'}
-                  </span>
-                  <ArrowRight className={`w-4 h-4 text-stone-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
-                </div>
-              </div>
-
-              {/* Expanded Details */}
-              {isExpanded && (
-                <div className="pt-4 border-t border-stone-100 dark:border-stone-800 space-y-4 animate-fadeIn">
-                  
-                  {/* All Items */}
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-stone-500">Order Items</h4>
-                    <div className="divide-y divide-stone-100 dark:divide-stone-800">
-                      {order.items.map((item, idx) => (
-                        <div key={idx} className="py-2.5 flex items-center justify-between gap-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-xl bg-stone-100 dark:bg-stone-800 flex items-center justify-center p-1 shrink-0">
-                              <ProductVisual
-                                category="clothes"
-                                subCategory={item.subCategory || 'tshirt'}
-                                colorName={item.color || 'White'}
-                                bgColor="#2A3459"
-                                name={item.name}
-                                image={item.image}
-                                className="w-10 h-10 object-contain"
-                              />
-                            </div>
-                            <div>
-                              <p className="font-bold text-sm text-stone-900 dark:text-white font-serif">{item.name}</p>
-                              <p className="text-xs text-stone-400">Size: {item.size || 'M'} • Qty: {item.qty}</p>
-                            </div>
-                          </div>
-                          <p className="font-bold text-sm text-stone-900 dark:text-white font-serif">
-                            ₱{(item.price * item.qty).toLocaleString()}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Delivery & Payment Info */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs bg-stone-50 dark:bg-stone-800/50 rounded-2xl p-4">
-                    <div className="space-y-1">
-                      <p className="text-stone-500 flex items-center gap-1.5">
-                        <User className="w-3.5 h-3.5" />
-                        Recipient
-                      </p>
-                      <p className="font-bold text-stone-900 dark:text-white">{order.customer.name}</p>
-                      <p className="text-stone-500">{order.customer.phone}</p>
-                      <p className="text-stone-500 flex items-start gap-1.5 mt-1">
-                        <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                        <span>{order.customer.address}</span>
-                      </p>
-                    </div>
-                    <div className="space-y-1 text-right sm:text-left">
-                      <p className="text-stone-500">Payment Method</p>
-                      <p className="font-bold text-stone-900 dark:text-white">{order.payment}</p>
-                      <p className="text-stone-500 mt-1">Order Status</p>
-                      <p className={`font-bold ${statusConfig.color}`}>{statusConfig.label}</p>
-                    </div>
-                  </div>
-
-                  {/* Pricing Summary */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-stone-100 dark:border-stone-800">
-                    <div className="space-y-0.5 text-xs text-stone-500">
-                      <div className="flex gap-4">
-                        <span>Subtotal: ₱{order.subtotal.toLocaleString()}</span>
-                        <span>Shipping: {order.shipping === 0 ? 'FREE' : `₱${order.shipping.toLocaleString()}`}</span>
-                      </div>
-                      {order.discount > 0 && (
-                        <p className="text-emerald-600 font-bold">Discount: -₱{order.discount.toLocaleString()}</p>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-stone-500">Total Paid</p>
-                      <p className="text-lg font-black text-stone-900 dark:text-indigo-400 font-serif">
-                        ₱{order.total.toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Review Button */}
-                  {(status === 'Delivered' || status === 'To Review' || (status === 'Completed' && !hasReview)) && (
-                    <button
-                      onClick={() => setReviewingOrder(order)}
-                      className="w-full py-2.5 bg-yellow-500 hover:bg-yellow-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2"
-                    >
-                      <Star className="w-4 h-4" />
-                      <span>Rate & Review this Order</span>
-                    </button>
-                  )}
-
-                  {/* Show review if exists */}
-                  {hasReview && order.review && (
-                    <div className="p-4 rounded-xl bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-900">
-                      <div className="flex items-center gap-2">
-                        <div className="flex">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <Star
-                              key={star}
-                              className={`w-4 h-4 ${
-                                star <= (order.review?.rating || 0)
-                                  ? 'fill-yellow-400 text-yellow-400'
-                                  : 'text-stone-300'
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <span className="text-xs text-stone-500 ml-2">
-                          {order.review?.date ? new Date(order.review.date).toLocaleDateString() : ''}
-                        </span>
-                      </div>
-                      <p className="text-sm text-stone-700 dark:text-stone-300 mt-1">
-                        {order.review?.comment}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
+      {/* Progress Stepper (always visible, clickable = order filter) */}
+      <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm">
+        <StatusProgress
+          currentStatus={navStatus}
+          onStepClick={handleFilterClick}
+        />
       </div>
 
-      {/* Review Modal */}
+      {/* Orders List */}
+      {filteredOrders.length === 0 ? (
+        <div className="py-10 flex justify-center">
+          <div className="w-full max-w-sm bg-white dark:bg-stone-900 rounded-3xl border border-stone-200 dark:border-stone-800 shadow-lg p-10 text-center space-y-5">
+            <div className="w-16 h-16 mx-auto rounded-full bg-stone-100 dark:bg-stone-800 text-stone-400 flex items-center justify-center">
+              {activeTab === 'ALL' ? <ShoppingBag className="w-8 h-8" /> :
+               activeTab === 'TO PAY' ? <CreditCard className="w-8 h-8" /> :
+               activeTab === 'TO SHIP' ? <Package className="w-8 h-8" /> :
+               activeTab === 'TO RECEIVE' ? <Truck className="w-8 h-8" /> :
+               activeTab === 'TO REVIEW' ? <Star className="w-8 h-8" /> : <CheckCircle2 className="w-8 h-8" />}
+            </div>
+            <p className="text-stone-600 dark:text-stone-300 font-semibold">No related orders.</p>
+            <button
+              onClick={() => setPage('shop')}
+              className="px-7 py-3 bg-stone-900 dark:bg-indigo-500 text-white hover:bg-indigo-600 rounded-full text-xs font-bold uppercase tracking-wider transition-all"
+            >
+              Explore Shop
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {filteredOrders.map(renderOrderCard)}
+        </div>
+      )}
+
+      {/* Delivery & Review Modal */}
       {reviewingOrder && (
-        <ReviewModal
+        <DeliveryModal
           order={reviewingOrder}
           onClose={() => setReviewingOrder(null)}
-          onSubmit={handleSubmitReview}
+          onRate={handleSubmitReview}
         />
       )}
     </div>

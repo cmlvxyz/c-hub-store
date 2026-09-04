@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { StoreProvider, useStore } from './context/StoreContext';
 import { Header } from './components/Header';
+import { MobileBottomNav } from './components/MobileBottomNav';
 import { Footer } from './components/Footer';
 import { SplashScreen } from './components/SplashScreen';
 import { ProductShowcase } from './components/ProductShowcase';
@@ -15,7 +16,7 @@ import { FAQPage, ShippingPage, ReturnsPage, SizeGuidePage, ContactPage } from '
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
-  const { page, activeBgColor, isDarkTheme, toast, user, splashShown, setPage } = useStore();
+  const { page, activeBgColor, isDarkTheme, toast, user, splashShown, setPage, shopBgColor } = useStore();
   const [hasRenderedAfterSplash, setHasRenderedAfterSplash] = useState(false);
   const routedAfterSplash = useRef(false);
 
@@ -85,7 +86,7 @@ const MainLayout: React.FC = () => {
 
   return (
     <div
-      className="min-h-screen flex flex-col justify-between overflow-x-hidden relative"
+      className="min-h-screen flex flex-col justify-between overflow-x-hidden relative pt-20 md:pt-0"
       style={{
         ...(containerBgStyle || { backgroundColor: '#ffffff' }),
         transition: 'background-color 0.65s cubic-bezier(0.4, 0, 0.2, 1), color 0.5s ease'
@@ -97,7 +98,12 @@ const MainLayout: React.FC = () => {
           <motion.div
             className="absolute inset-0"
             style={{
-              backgroundImage: `url('/c-hub5.png')`,
+              backgroundImage: `
+                radial-gradient(900px 520px at 50% -6%, rgba(99,102,241,0.14), transparent 62%),
+                radial-gradient(760px 480px at 88% 22%, rgba(56,189,248,0.12), transparent 60%),
+                radial-gradient(820px 560px at 8% 78%, rgba(129,140,248,0.10), transparent 60%),
+                linear-gradient(180deg, #ffffff 0%, #f4f5fb 100%)
+              `,
               backgroundSize: '100% 100%',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
@@ -109,6 +115,14 @@ const MainLayout: React.FC = () => {
         </div>
       )}
 
+      {/* Mobile-only: buong screen ang kulay ng napiling product sa Shop (desktop untouched) */}
+      {page === 'shop' && (
+        <div
+          className="fixed inset-0 z-0 pointer-events-none md:hidden"
+          style={{ backgroundColor: shopBgColor }}
+        />
+      )}
+
       {/* Enhanced Animated White Splash Screen */}
       <SplashScreen />
 
@@ -118,6 +132,7 @@ const MainLayout: React.FC = () => {
           initial={{ opacity: 0, y: 30, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 30, scale: 0.9 }}
+          id="appToast"
           className="fixed bottom-6 right-6 z-50 pointer-events-none"
         >
           <div className="flex items-center gap-2.5 px-5 py-3 rounded-2xl bg-stone-900 text-white shadow-2xl border border-stone-700 text-xs font-bold pointer-events-auto">
@@ -128,6 +143,11 @@ const MainLayout: React.FC = () => {
           </div>
         </motion.div>
       )}
+
+      {/* Mobile-fixed / desktop-in-flow header — rendered OUTSIDE the animated
+          wrapper so `position: fixed` targets the viewport (no transformed/filtered
+          ancestor). On desktop (md+) it stays in normal flow, unchanged. */}
+      {splashShown && <Header />}
 
       {/* Main Content with Drop-Down Entrance from the Top after Splash Screen finishes */}
       {splashShown ? (
@@ -144,15 +164,14 @@ const MainLayout: React.FC = () => {
           }}
           className="relative z-10 flex flex-col flex-1 w-full justify-between"
         >
-          <div className="flex flex-col flex-1">
-            <Header />
+          <div className="flex flex-col flex-1 pb-16 md:pb-0">
             <main className="flex-1 w-full">
-              <AnimatePresence mode="wait">
+              <AnimatePresence>
                 <motion.div
                   key={page}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -12 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
                   transition={{ duration: 0.25, ease: 'easeOut' }}
                 >
                   {renderActivePage()}
@@ -166,6 +185,10 @@ const MainLayout: React.FC = () => {
       ) : (
         <div className="opacity-0 pointer-events-none h-screen" />
       )}
+
+      {/* Mobile-only bottle nav — rendered OUTSIDE the animated wrapper so its
+          `position: fixed` targets the viewport (no transformed/filtered ancestor) */}
+      {splashShown && <MobileBottomNav />}
     </div>
   );
 };

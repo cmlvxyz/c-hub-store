@@ -74,7 +74,11 @@ export const Footer: React.FC = () => {
       style={{ 
         backgroundColor: footerBg,
         ...(!isShowcase && {
-          backgroundImage: `url('/c-hub.png')`,
+          backgroundImage: `
+            radial-gradient(900px 500px at 50% -20%, rgba(99,102,241,0.18), transparent 65%),
+            radial-gradient(700px 460px at 92% 30%, rgba(56,189,248,0.14), transparent 60%),
+            linear-gradient(180deg, ${footerBg} 0%, #0c0c10 100%)
+          `,
           backgroundSize: '100% 100%',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',

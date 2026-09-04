@@ -7,6 +7,7 @@ interface StoreContextType {
   page: PageType;
   gender: GenderType;
   subCategory: string;
+  lastCategoryPage: PageType;
   currentProductIndex: number;
   cart: CartItem[];
   orders: Order[];
@@ -16,6 +17,8 @@ interface StoreContextType {
   activeTextColor: string;
   isDarkTheme: boolean;
   searchQuery: string;
+  shopBgColor: string;
+  setShopBgColor: (color: string) => void;
   toast: { message: string; type?: 'info' | 'success' | 'warning' } | null;
   ordersUpdated: number;
   notifications: NotificationItem[];
@@ -89,7 +92,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [gender, setGenderState] = useState<GenderType>('men');
   const [subCategory, setSubCategoryState] = useState<string>('tshirt');
   const [currentProductIndex, setCurrentProductIndex] = useState<number>(0);
+  const [lastCategoryPage, setLastCategoryPage] = useState<PageType>('clothes');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [shopBgColor, setShopBgColor] = useState<string>('#ffffff');
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const [user, setUser] = useState<User>(() => {
@@ -502,6 +507,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setPageState(newPage);
     setCurrentProductIndex(0);
 
+    const categoryPages: string[] = ['clothes', 'shoes', 'pants', 'underwear', 'accessories'];
+    if (categoryPages.includes(newPage)) {
+      setLastCategoryPage(newPage as PageType);
+    }
+
     if (newSubCategory) {
       setSubCategoryState(newSubCategory);
     } else {
@@ -641,12 +651,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       image: item.image || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23e2e8f0"/%3E%3Ctext x="50" y="50" text-anchor="middle" dy=".3em" fill="%2394a3b8" font-size="12"%3EImage%3C/text%3E%3C/svg%3E'
     }));
 
-    // ✅ Local status mirror ng backend logic: COD -> To Ship | Online -> To Pay
-    const payMethod = (paymentMethod || '').toLowerCase();
-    const localStatus: Order['status'] =
-      payMethod.includes('cod') || payMethod.includes('cash on delivery')
-        ? 'To Ship'
-        : 'To Pay';
+    // ✅ All new orders start at 'Order' status
+    const localStatus: Order['status'] = 'Order';
 
     const newOrder: Order = {
       orderId: 'CHUB-' + Math.floor(100000 + Math.random() * 900000),
@@ -966,6 +972,7 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
         page,
         gender,
         subCategory,
+        lastCategoryPage,
         currentProductIndex,
         cart,
         orders,
@@ -975,6 +982,8 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
         activeTextColor,
         isDarkTheme,
         searchQuery,
+        shopBgColor,
+        setShopBgColor,
         toast,
         ordersUpdated,
         notifications,

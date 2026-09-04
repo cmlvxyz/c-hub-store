@@ -2,7 +2,8 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { PageType, GenderType } from '../types';
-import { ArrowRight, Shirt, Footprints, Tag, Glasses, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Shirt, Footprints, Tag, Glasses, CheckCircle2, Search, ShoppingBag } from 'lucide-react';
+import { ProductVisual } from './ProductVisual';
 
 export const HomePage: React.FC = () => {
   const { setPage, setGender, splashShown } = useStore();
@@ -15,6 +16,184 @@ export const HomePage: React.FC = () => {
     { id: 'accessories', title: 'Accessories', desc: 'Finish your silhouette', icon: <Glasses className="w-7 h-7" />, bg: 'bg-[#264441]', defaultGender: 'men' }
   ];
 
+  // Mobile-only state: search + gender filter for the middle home content.
+  const [mobileSearch, setMobileSearch] = React.useState('');
+  const [mobileGender, setMobileGender] = React.useState<GenderType>('men');
+
+  interface GenderTile {
+    label: string;
+    category: PageType;
+    menSub: string;
+    womenSub: string;
+    boysSub: string;
+    girlsSub: string;
+    visSub: string;
+    womenLabel: string;
+    girlsLabel: string;
+    boysLabel: string;
+    colorName: string;
+    bgColor: string;
+  }
+
+  // 12 mobile categories, mapped to the nearest existing subcategory per gender.
+  // For Women/Girls, clothes labels adapt: Sweatshirts -> Top, Hoodie -> Dress.
+  const genderTiles: GenderTile[] = [
+    { label: 'T-Shirts', category: 'clothes', menSub: 'tshirt', womenSub: 'tshirt', boysSub: 'tshirt', girlsSub: 'tshirt', visSub: 'tshirt', womenLabel: 'T-Shirts', girlsLabel: 'T-Shirts', boysLabel: 'T-shirts', colorName: 'White', bgColor: '#F5F5F5' },
+    { label: 'Sweatshirts', category: 'clothes', menSub: 'sweatshirt', womenSub: 'top', boysSub: 'polo', girlsSub: 'top', visSub: 'sweatshirt', womenLabel: 'Top', girlsLabel: 'Top', boysLabel: 'Polo', colorName: 'White', bgColor: '#F5F4EF' },
+    { label: 'Hoodie', category: 'clothes', menSub: 'hoodie', womenSub: 'dress', boysSub: 'poloshirt', girlsSub: 'dress', visSub: 'hoodie', womenLabel: 'Dress', girlsLabel: 'Dress', boysLabel: 'Polo-shirt', colorName: 'Beige', bgColor: '#CEB699' },
+    { label: 'Pants', category: 'pants', menSub: 'jeans', womenSub: 'jeans', boysSub: 'jeans', girlsSub: 'jeans', visSub: 'jeans', womenLabel: 'Pants', girlsLabel: 'Pants', boysLabel: 'Pants', colorName: 'Light Stone', bgColor: '#D9D9D9' },
+    { label: 'Jeans', category: 'pants', menSub: 'jeans', womenSub: 'jeans', boysSub: 'jeans', girlsSub: 'jeans', visSub: 'jeans', womenLabel: 'Jeans', girlsLabel: 'Jeans', boysLabel: 'Jeans', colorName: 'Light Stone', bgColor: '#D9D9D9' },
+    { label: 'Slacks', category: 'pants', menSub: 'jeans', womenSub: 'jeans', boysSub: 'jeans', girlsSub: 'jeans', visSub: 'jeans', womenLabel: 'Slacks', girlsLabel: 'Slacks', boysLabel: 'Slacks', colorName: 'Light Stone', bgColor: '#D9D9D9' },
+    { label: 'Shoes', category: 'shoes', menSub: 'sneakers', womenSub: 'sneakers', boysSub: 'sneakers', girlsSub: 'sneakers', visSub: 'sneakers', womenLabel: 'Shoes', girlsLabel: 'Shoes', boysLabel: 'Shoes', colorName: 'Chalk White', bgColor: '#F5F5F5' },
+    { label: 'Black Shoes', category: 'shoes', menSub: 'sneakers', womenSub: 'sneakers', boysSub: 'sneakers', girlsSub: 'sneakers', visSub: 'sneakers', womenLabel: 'Black Shoes', girlsLabel: 'Black Shoes', boysLabel: 'Black Shoes', colorName: 'Stealth Charcoal', bgColor: '#4A4A4A' },
+    { label: 'Boots', category: 'shoes', menSub: 'boots', womenSub: 'sandals', boysSub: 'boots', girlsSub: 'boots', visSub: 'boots', womenLabel: 'Boots', girlsLabel: 'Boots', boysLabel: 'Boots', colorName: 'Desert Tan', bgColor: '#CEB699' },
+    { label: 'Accessories', category: 'accessories', menSub: 'bags', womenSub: 'bags', boysSub: 'bags', girlsSub: 'bags', visSub: 'bags', womenLabel: 'Accessories', girlsLabel: 'Accessories', boysLabel: 'Accessories', colorName: 'Stone', bgColor: '#F5F5F5' },
+    { label: 'Bags', category: 'accessories', menSub: 'bags', womenSub: 'bags', boysSub: 'bags', girlsSub: 'bags', visSub: 'bags', womenLabel: 'Bags', girlsLabel: 'Bags', boysLabel: 'Bags', colorName: 'Stone', bgColor: '#F5F5F5' },
+    { label: 'Caps', category: 'accessories', menSub: 'hats', womenSub: 'hats', boysSub: 'hats', girlsSub: 'hats', visSub: 'hats', womenLabel: 'Caps', girlsLabel: 'Caps', boysLabel: 'Caps', colorName: 'White', bgColor: '#F5F5F5' }
+  ];
+
+  const tileSubForGender = (t: GenderTile): string =>
+    mobileGender === 'men' ? t.menSub
+      : mobileGender === 'women' ? t.womenSub
+      : mobileGender === 'boys' ? t.boysSub
+      : t.girlsSub;
+
+  const tileLabelFor = (t: GenderTile): string =>
+    mobileGender === 'women' ? t.womenLabel
+      : mobileGender === 'girls' ? t.girlsLabel
+      : mobileGender === 'boys' ? t.boysLabel
+      : t.label;
+
+  const openCategoryTile = (t: GenderTile) => {
+    setGender(mobileGender);
+    setPage(t.category, tileSubForGender(t), mobileGender);
+  };
+
+  // For Women/Girls, order the three clothes tiles as Top -> Dress -> T-Shirt.
+  // For Boys, order them as Polo -> Polo-shirt -> T-shirts.
+  const clothesOrder =
+    mobileGender === 'women' || mobileGender === 'girls' || mobileGender === 'boys'
+      ? [1, 2, 0, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+      : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+
+  const orderedGenderTiles = clothesOrder.map((i) => genderTiles[i]);
+
+  const filteredGenderTiles = orderedGenderTiles.filter((t) =>
+    t.label.toLowerCase().includes(mobileSearch.toLowerCase())
+  );
+
+  interface GenderProduct {
+    id: string;
+    name: string;
+    color: string;
+    category: PageType;
+    sub: string;
+    colorName: string;
+    bgColor: string;
+    price: number;
+    original: number;
+    image?: string;
+  }
+
+  // Curated per-gender representative mix, reusing existing C-HUB product data.
+  const genderProducts: Record<GenderType, GenderProduct[]> = {
+    men: [
+      { id: 'm-tshirt', name: 'Premium T-Shirt', color: 'White', category: 'clothes', sub: 'tshirt', colorName: 'White', bgColor: '#F5F5F5', price: 1999, original: 2999, image: '/images/clothes/men/t-shirts/white.png' },
+      { id: 'm-hoodie', name: 'Cozy Hoodie', color: 'Beige', category: 'clothes', sub: 'hoodie', colorName: 'Beige', bgColor: '#CEB699', price: 2499, original: 3499, image: '/images/clothes/men/hoodie/beige.png' },
+      { id: 'm-sweat', name: 'Classic Sweatshirt', color: 'White', category: 'clothes', sub: 'sweatshirt', colorName: 'White', bgColor: '#F5F4EF', price: 2199, original: 3199, image: '/images/clothes/men/sweatshirts/white1.png' },
+      { id: 'm-jeans', name: 'Classic Denim Jeans', color: 'Light Stone', category: 'pants', sub: 'jeans', colorName: 'Light Stone', bgColor: '#D9D9D9', price: 1799, original: 2499, image: '/images/pants/men/pants/pants5.png' },
+      { id: 'm-sneak', name: 'Urban Sneakers', color: 'Chalk White', category: 'shoes', sub: 'sneakers', colorName: 'Chalk White', bgColor: '#F5F5F5', price: 2499, original: 3499 },
+      { id: 'm-bag', name: 'Everyday Crossbody Bag', color: 'Stone', category: 'accessories', sub: 'bags', colorName: 'Stone', bgColor: '#F5F5F5', price: 1499, original: 2199 },
+      { id: 'm-tshirt2', name: 'Premium T-Shirt', color: 'Black', category: 'clothes', sub: 'tshirt', colorName: 'Black', bgColor: '#4A4A4A', price: 1999, original: 2999, image: '/images/clothes/men/t-shirts/black.png' },
+      { id: 'm-hoodie2', name: 'Cozy Hoodie', color: 'Sage', category: 'clothes', sub: 'hoodie', colorName: 'Sage', bgColor: '#648C7A', price: 2499, original: 3499, image: '/images/clothes/men/hoodie/sage.png' },
+      { id: 'm-jeans2', name: 'Classic Denim Jeans', color: 'Washed Blue', category: 'pants', sub: 'jeans', colorName: 'Washed Blue', bgColor: '#8FA8C8', price: 1799, original: 2499, image: '/images/pants/men/pants/pants3.png' }
+    ],
+    women: [
+      { id: 'w-top', name: 'Peplum Top', color: 'Cream', category: 'clothes', sub: 'top', colorName: 'Cream', bgColor: '#F3F0EA', price: 1799, original: 2799, image: '/images/clothes/women/top/top1.png' },
+      { id: 'w-dress', name: 'Summer Halter Dress', color: 'Polka White', category: 'clothes', sub: 'dress', colorName: 'Polka White', bgColor: '#F4F2EE', price: 2999, original: 3999, image: '/images/clothes/women/dress/dress1.png' },
+      { id: 'w-tshirt', name: 'Premium T-Shirt', color: 'White', category: 'clothes', sub: 'tshirt', colorName: 'White', bgColor: '#F5F5F5', price: 1599, original: 2599, image: '/images/clothes/men/t-shirts/white.png' },
+      { id: 'w-jeans', name: 'Women Denim', color: 'Light Stone', category: 'pants', sub: 'jeans', colorName: 'Light Stone', bgColor: '#D9D9D9', price: 1799, original: 2499 },
+      { id: 'w-sneak', name: 'Women Runner', color: 'Pure White', category: 'shoes', sub: 'sneakers', colorName: 'Pure White', bgColor: '#F5F5F5', price: 2499, original: 3499 },
+      { id: 'w-bag', name: 'Women Tote & Crossbody', color: 'Stone', category: 'accessories', sub: 'bags', colorName: 'Stone', bgColor: '#F5F5F5', price: 1499, original: 2199 },
+      { id: 'w-top2', name: 'Ruffle Camisole Top', color: 'Blush', category: 'clothes', sub: 'top', colorName: 'Blush', bgColor: '#F0D9D9', price: 1499, original: 2499 },
+      { id: 'w-jacket', name: 'Oversized Denim Jacket', color: 'Faded', category: 'clothes', sub: 'top', colorName: 'Faded', bgColor: '#9FB2CE', price: 2399, original: 3299 },
+      { id: 'w-dress2', name: 'Satin Slip Dress', color: 'Champagne', category: 'clothes', sub: 'dress', colorName: 'Champagne', bgColor: '#E8D9C0', price: 2999, original: 4199 }
+    ],
+    boys: [
+      { id: 'b-polo', name: 'Boys Polo', color: 'Crisp White', category: 'clothes', sub: 'polo', colorName: 'White', bgColor: '#F5F5F5', price: 1299, original: 1999, image: '/images/clothes/boys/poloshirt/bpoloshirt1.png' },
+      { id: 'b-poloshirt', name: 'Boys Polo Shirt', color: 'White', category: 'clothes', sub: 'poloshirt', colorName: 'White', bgColor: '#F0F0F0', price: 1499, original: 2299, image: '/images/clothes/boys/poloshirt/bpoloshirt1.png' },
+      { id: 'b-tshirt', name: 'Premium T-Shirt', color: 'White', category: 'clothes', sub: 'tshirt', colorName: 'White', bgColor: '#F5F5F5', price: 999, original: 1599, image: '/images/clothes/men/t-shirts/white.png' },
+      { id: 'b-jeans', name: 'Boys Classic Denim', color: 'Light Gray', category: 'pants', sub: 'jeans', colorName: 'Light Gray', bgColor: '#D9D9D9', price: 1499, original: 2099, image: '/images/pants/boys/pants/bpants1.png' },
+      { id: 'b-sneak', name: 'Boys Kick', color: 'White', category: 'shoes', sub: 'sneakers', colorName: 'White', bgColor: '#F5F5F5', price: 1999, original: 2999 },
+      { id: 'b-bag', name: 'Boys Daypack', color: 'White', category: 'accessories', sub: 'bags', colorName: 'White', bgColor: '#F5F5F5', price: 1299, original: 1899 },
+      { id: 'b-tshirt2', name: 'Premium T-Shirt', color: 'Black', category: 'clothes', sub: 'tshirt', colorName: 'Black', bgColor: '#4A4A4A', price: 999, original: 1599, image: '/images/clothes/men/t-shirts/black.png' },
+      { id: 'b-hoodie', name: 'Boys Zip Hoodie', color: 'Navy', category: 'clothes', sub: 'poloshirt', colorName: 'Navy', bgColor: '#2A3A5A', price: 1799, original: 2599 },
+      { id: 'b-jeans2', name: 'Boys Classic Denim', color: 'Indigo', category: 'pants', sub: 'jeans', colorName: 'Indigo', bgColor: '#5A78A8', price: 1499, original: 2099, image: '/images/pants/boys/pants/bpants5.png' }
+    ],
+    girls: [
+      { id: 'g-top', name: 'Peplum Top', color: 'Cream', category: 'clothes', sub: 'top', colorName: 'Cream', bgColor: '#F3F0EA', price: 1699, original: 2699, image: '/images/clothes/women/top/top1.png' },
+      { id: 'g-dress', name: 'Summer Halter Dress', color: 'Polka White', category: 'clothes', sub: 'dress', colorName: 'Polka White', bgColor: '#F4F2EE', price: 2899, original: 3899, image: '/images/clothes/girls/dress/gdress1.png' },
+      { id: 'g-tshirt', name: 'Premium T-Shirt', color: 'White', category: 'clothes', sub: 'tshirt', colorName: 'White', bgColor: '#F5F5F5', price: 1499, original: 2499, image: '/images/clothes/men/t-shirts/white.png' },
+      { id: 'g-jeans', name: 'Girls Soft Denim', color: 'Mist', category: 'pants', sub: 'jeans', colorName: 'Mist', bgColor: '#D9D9D9', price: 1499, original: 2099 },
+      { id: 'g-sneak', name: 'Girls Spark Sneaker', color: 'Cloud White', category: 'shoes', sub: 'sneakers', colorName: 'Cloud White', bgColor: '#F5F5F5', price: 1999, original: 2999 },
+      { id: 'g-bag', name: 'Girls Mini Pack', color: 'White', category: 'accessories', sub: 'bags', colorName: 'White', bgColor: '#F5F5F5', price: 1299, original: 1899 },
+      { id: 'g-top2', name: 'Ruffle Camisole Top', color: 'Blush', category: 'clothes', sub: 'top', colorName: 'Blush', bgColor: '#F0D9D9', price: 1399, original: 2299 },
+      { id: 'g-dress2', name: 'Tulle Party Dress', color: 'Lavender', category: 'clothes', sub: 'dress', colorName: 'Lavender', bgColor: '#D8D0F0', price: 2799, original: 3899 },
+      { id: 'g-redress', name: 'Gingham Swing Dress', color: 'Rose', category: 'clothes', sub: 'dress', colorName: 'Rose', bgColor: '#E8B8B8', price: 2299, original: 3299 }
+    ]
+  };
+
+  const activeGenderProducts = genderProducts[mobileGender].filter((p) =>
+    `${p.name} ${p.color}`.toLowerCase().includes(mobileSearch.toLowerCase())
+  );
+
+  const openProduct = (p: GenderProduct) => {
+    setGender(mobileGender);
+    setPage(p.category, p.sub, mobileGender);
+  };
+
+  // Real PNG paths for category tiles that have actual product images, per gender.
+  // Tiles not listed here (Shoes, Boots, Accessories, etc.) fall back to ProductVisual SVG.
+  const tileImageFor = (label: string, g: GenderType): string | null => {
+    const map: Record<string, Record<GenderType, string | null>> = {
+      'T-Shirts': { men: '/images/clothes/men/t-shirts/white.png', women: '/images/clothes/men/t-shirts/white.png', boys: '/images/clothes/men/t-shirts/white.png', girls: '/images/clothes/men/t-shirts/white.png' },
+      Sweatshirts: { men: '/images/clothes/men/sweatshirts/white1.png', women: '/images/clothes/women/top/top1.png', boys: null, girls: '/images/clothes/women/top/top1.png' },
+      Hoodie: { men: '/images/clothes/men/hoodie/beige.png', women: '/images/clothes/women/dress/dress1.png', boys: null, girls: '/images/clothes/women/dress/dress1.png' },
+      Pants: { men: '/images/pants/men/pants/pants3.png', women: null, boys: '/images/pants/boys/pants/bpants1.png', girls: null },
+      Jeans: { men: null, women: null, boys: '/images/pants/boys/pants/bpants5.png', girls: null },
+      Slacks: { men: null, women: null, boys: '/images/pants/boys/pants/bpants1.png', girls: null }
+    };
+    return (map[label] && map[label][g]) || null;
+  };
+
+  const genderOptions: GenderType[] = ['men', 'women', 'boys', 'girls'];
+
+  // Renders the real product image when available; falls back to ProductVisual SVG
+  // only if the image actually fails to load.
+  const TileVisual: React.FC<{ t: GenderTile; imgSrc: string | null; label: string }> = ({ t, imgSrc, label }) => {
+    const [failed, setFailed] = React.useState(false);
+    if (!imgSrc || failed) {
+      return (
+        <ProductVisual
+          category={t.category}
+          subCategory={tileSubForGender(t)}
+          colorName={t.colorName}
+          bgColor={t.bgColor}
+          name={label}
+          className="w-[60%] h-[60%] object-contain"
+        />
+      );
+    }
+    return (
+      <img
+        src={imgSrc}
+        alt={label}
+        className="w-[60%] h-[60%] object-contain"
+        onError={() => setFailed(true)}
+      />
+    );
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -50 }}
@@ -26,6 +205,176 @@ export const HomePage: React.FC = () => {
       className="w-full space-y-12 sm:space-y-16 py-4 sm:py-6"
     >
       {/* WALA NA YUNG HEADER DITO. Nasa App.tsx na siya! */}
+
+      {/* ============================================================
+          MOBILE HOME (md:hidden) — middle content only.
+          Order: Search bar -> Hero -> Categories -> Popular Products.
+          ============================================================ */}
+      <div className="md:hidden w-full px-4 space-y-8 pb-4">
+
+        {/* Mobile Search Bar */}
+        <div className="relative">
+          <input
+            type="text"
+            value={mobileSearch}
+            onChange={(e) => setMobileSearch(e.target.value)}
+            placeholder="Search products..."
+            className="w-full pl-5 pr-11 py-3 rounded-full bg-white border border-indigo-200 text-sm text-stone-900 placeholder-stone-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-all"
+          />
+          <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-400 pointer-events-none" />
+        </div>
+
+        {/* Mobile Hero */}
+        <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-indigo-600 via-indigo-700 to-indigo-900 text-white p-7">
+          <div className="relative z-10 space-y-4">
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-[10px] font-black uppercase tracking-widest border border-white/20">
+              New Season • 2026
+            </span>
+            <h1 className="text-4xl font-black font-serif tracking-tight leading-[1.05] text-white">
+              Wear the <span className="italic">story</span> you write.
+            </h1>
+            <p className="text-white/80 text-[13px] leading-relaxed font-medium">
+              Premium streetwear cut for confidence — heavyweight cotton, honest pricing, everyday comfort.
+            </p>
+            <button
+              onClick={() => setPage('shop')}
+              className="inline-flex items-center gap-2 mt-1 px-6 py-3 bg-white text-indigo-700 font-bold rounded-full text-sm shadow-lg shadow-black/20 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              <span>SHOP</span>
+            </button>
+          </div>
+        </section>
+
+        {/* Mobile Categories — 4 columns × 3 rows, with gender filter */}
+        <section className="space-y-4">
+          <div className="flex items-end justify-between">
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Curated Lineup</span>
+              <h2 className="text-xl font-black font-serif text-stone-900 mt-0.5">Categories</h2>
+            </div>
+            <button
+              onClick={() => setPage('shop')}
+              className="text-[11px] font-extrabold uppercase tracking-wider text-indigo-600 flex items-center gap-1 cursor-pointer"
+            >
+              <span>View all</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Gender filter for categories */}
+          <div className="grid grid-cols-4 gap-1 rounded-full bg-stone-100 p-1">
+            {genderOptions.map((g) => (
+              <button
+                key={g}
+                onClick={() => setMobileGender(g)}
+                className={`py-2 rounded-full text-xs font-bold capitalize transition-all cursor-pointer ${
+                  mobileGender === g
+                    ? 'bg-indigo-600 text-white shadow'
+                    : 'text-stone-600'
+                }`}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+
+          {filteredGenderTiles.length > 0 ? (
+            <div className="space-y-2 sm:space-y-2.5">
+              {[0, 6].map((start) => (
+                <div key={start} className="overflow-x-auto no-scrollbar -mx-4 px-4">
+                  <div className="w-[150%] shrink-0 grid grid-cols-6 gap-2 sm:gap-2.5">
+                    {filteredGenderTiles.slice(start, start + 6).map((t) => {
+                      const imgSrc = tileImageFor(t.label, mobileGender);
+                      const label = tileLabelFor(t);
+                      return (
+                        <button
+                          key={t.label}
+                          onClick={() => openCategoryTile(t)}
+                          className="flex flex-col items-center gap-1.5 text-center cursor-pointer"
+                        >
+                          <div className="relative w-full aspect-square rounded-2xl bg-white border border-stone-200/70 shadow-sm overflow-hidden flex items-center justify-center">
+                            <TileVisual t={t} imgSrc={imgSrc} label={label} />
+                          </div>
+                          <span className="text-[11px] font-semibold text-stone-800 leading-tight">{label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-stone-500 py-6 text-center">No categories found for "{mobileSearch}".</p>
+          )}
+        </section>
+
+        {/* Mobile Popular Products — follows selected gender */}
+        <section className="space-y-4">
+          <div className="flex items-end justify-between">
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">
+                {mobileGender.charAt(0).toUpperCase() + mobileGender.slice(1)} Picks
+              </span>
+              <h2 className="text-xl font-black font-serif text-stone-900 mt-0.5">Popular Products</h2>
+            </div>
+            <button
+              onClick={() => setPage('shop')}
+              className="text-[11px] font-extrabold uppercase tracking-wider text-indigo-600 flex items-center gap-1 cursor-pointer"
+            >
+              <span>View all</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {activeGenderProducts.length > 0 ? (
+            <div className="grid grid-cols-3 gap-2.5">
+              {activeGenderProducts.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => openProduct(p)}
+                  className="text-left rounded-2xl bg-white border border-stone-200/80 shadow-sm overflow-hidden hover:shadow-md transition-all cursor-pointer group"
+                >
+                  <div className="relative aspect-square flex items-center justify-center p-2 bg-white">
+                    {p.image ? (
+                      <img
+                        src={p.image}
+                        alt={p.name}
+                        className="w-[85%] h-[85%] object-contain group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <ProductVisual
+                        category={p.category}
+                        subCategory={p.sub}
+                        colorName={p.colorName}
+                        bgColor={p.bgColor}
+                        name={p.name}
+                        className="w-[85%] h-[85%] object-contain group-hover:scale-105 transition-transform duration-300"
+                      />
+                    )}
+                  </div>
+                  <div className="p-2.5 space-y-0.5">
+                    <p className="text-[13px] font-bold text-stone-900 leading-tight line-clamp-1">{p.name}</p>
+                    <p className="text-[11px] text-stone-400">{p.color}</p>
+                    <div className="flex items-baseline gap-1.5 pt-0.5">
+                      <span className="text-sm font-black text-stone-900">₱{p.price.toLocaleString()}</span>
+                      <span className="text-[10px] text-stone-400 line-through">₱{p.original.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-stone-500 py-6 text-center">No products found for "{mobileSearch}".</p>
+          )}
+        </section>
+      </div>
+
+      {/* ============================================================
+          DESKTOP HOME (hidden md:block) — unchanged approved design.
+          ============================================================ */}
+      <div className="hidden md:block w-full space-y-12 sm:space-y-16">
 
       {/* ===== HERO SECTION ===== */}
       <section className="max-w-[99%] mx-auto px-4 sm:px-8">
@@ -206,6 +555,8 @@ export const HomePage: React.FC = () => {
           </p>
         </div>
       </section>
+
+      </div>
 
     </motion.div>
   );

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
-import { Trash2, Plus, Minus, ShoppingBag, Truck, ShieldCheck, ShoppingCart, Check, X } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, Truck, ShieldCheck, ShoppingCart, Check, X, ArrowLeft } from 'lucide-react';
 import { ProductVisual } from './ProductVisual';
 
 export const CartPage: React.FC = () => {
-  const { cart, updateCartQty, removeFromCart, clearCart, setPage } = useStore();
+  const { cart, updateCartQty, removeFromCart, clearCart, setPage, lastCategoryPage, subCategory, gender } = useStore();
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
@@ -76,6 +76,17 @@ export const CartPage: React.FC = () => {
   return (
     <div className="w-full max-w-[1300px] mx-auto px-4 sm:px-8 py-8 space-y-8 animate-fadeIn">
       
+      {/* Back to Shopping */}
+      <div>
+        <button
+          onClick={() => setPage(lastCategoryPage, subCategory, gender)}
+          className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-full bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 hover:scale-105 transition-all shadow-sm"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Continue Shopping
+        </button>
+      </div>
+      
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-stone-200 dark:border-stone-800">
         <div>
@@ -141,7 +152,7 @@ export const CartPage: React.FC = () => {
                       : 'border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900'
                   }`}
                 >
-                  <div className="flex items-start gap-4">
+                  <div className="flex items-start gap-4 flex-wrap">
                     {/* Selection Checkbox */}
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleSelectItem(itemId); }}
@@ -190,7 +201,7 @@ export const CartPage: React.FC = () => {
                     </div>
 
                     {/* Qty Controls */}
-                    <div className="flex flex-col items-end gap-2">
+                    <div className="flex sm:flex-col items-center sm:items-end justify-between gap-2 sm:gap-2 w-full sm:w-auto order-last">
                       <div className="flex items-center gap-1 bg-stone-100 dark:bg-stone-800 rounded-xl p-1">
                         <button
                           onClick={(e) => { e.stopPropagation(); updateCartQty(item.id, item.size, -1); }}

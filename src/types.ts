@@ -19,11 +19,10 @@ export type PageType =
 export type GenderType = 'men' | 'women' | 'boys' | 'girls';
 
 export type OrderStatus = 
+  | 'Order'
   | 'To Pay'
   | 'To Ship'
-  | 'Shipped'
-  | 'Out for Delivery'
-  | 'Delivered'
+  | 'To Receive'
   | 'To Review'
   | 'Completed'
   | 'Cancelled';

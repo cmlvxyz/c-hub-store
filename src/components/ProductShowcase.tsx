@@ -474,7 +474,7 @@ export const ProductShowcase: React.FC = () => {
         </div>
 
         {/* Floating Bottom-Right Container: Mini Thumbnail of NEXT Shirt */}
-        <div className="fixed sm:absolute bottom-5 right-5 sm:right-35 sm:bottom-20 flex flex-col items-end gap-2 z-30">
+        <div id="productFloatCta" className="fixed sm:absolute bottom-5 right-5 sm:right-35 sm:bottom-20 flex flex-col items-end gap-2 z-30">
           
           {/* Mini Thumbnail of NEXT Shirt */}
           {nextProduct && currentProducts.length > 1 && (
