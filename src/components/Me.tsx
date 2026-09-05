@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import {
   User,
@@ -14,6 +14,7 @@ import {
   LogOut,
   PencilLine,
   Phone,
+  Info,
 } from 'lucide-react';
 
 /*
@@ -29,7 +30,17 @@ import {
  * Hindi gumagawa ng bagong auth at hindi binabago ang ibang screens.
  */
 export const Me: React.FC = () => {
-  const { user, customerInfo, setPage, showToast, logout } = useStore();
+  const { user, customerInfo, setPage, logout } = useStore();
+
+  // Local "coming soon" toast — dito lang sa Me, hindi global.
+  const [meToast, setMeToast] = useState<{ message: string } | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
+  }, []);
 
   const isLoggedIn = user.isLoggedIn;
   const displayName = customerInfo?.name || user.username || 'C-Hub User';
@@ -90,7 +101,11 @@ export const Me: React.FC = () => {
   const avatar = customerInfo?.avatar || '';
 
   const goSignIn = () => setPage('signin');
-  const comingSoon = () => showToast('This feature is coming soon.', 'info');
+  const comingSoon = () => {
+    setMeToast({ message: 'This feature is coming soon.' });
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setMeToast(null), 2500);
+  };
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 md:px-10 pt-4 md:pt-8 pb-10 animate-fadeIn">
@@ -266,6 +281,16 @@ export const Me: React.FC = () => {
             Log Out
           </button>
         </>
+      )}
+
+      {/* Local "coming soon" toast */}
+      {meToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+          <div className="flex items-center gap-2.5 px-5 py-3 rounded-2xl bg-stone-900 text-white shadow-2xl border border-stone-700 text-xs font-bold">
+            <Info className="w-4 h-4 text-indigo-400 shrink-0" />
+            <span>{meToast.message}</span>
+          </div>
+        </div>
       )}
     </div>
   );

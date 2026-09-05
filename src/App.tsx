@@ -18,10 +18,9 @@ import { LoginPage } from './components/LoginPage';
 import { Me } from './components/Me';
 import { EditProfile } from './components/EditProfile';
 import { FAQPage, ShippingPage, ReturnsPage, SizeGuidePage, ContactPage } from './components/SupportPages';
-import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
-  const { page, activeBgColor, isDarkTheme, toast, user, splashShown, setPage, shopBgColor } = useStore();
+  const { page, activeBgColor, user, splashShown, setPage, shopBgColor } = useStore();
   const [hasRenderedAfterSplash, setHasRenderedAfterSplash] = useState(false);
   const routedAfterSplash = useRef(false);
 
@@ -152,24 +151,6 @@ const MainLayout: React.FC = () => {
         {splashShown && page === 'signup' && <SignUp key="signup" />}
         {splashShown && (page === 'login' || showAuthBlock) && <LoginPage key="login" />}
       </AnimatePresence>
-
-      {/* Global Interactive Notification Toast */}
-      {toast && (
-        <motion.div 
-          initial={{ opacity: 0, y: 30, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 30, scale: 0.9 }}
-          id="appToast"
-          className="fixed bottom-6 right-6 z-50 pointer-events-none"
-        >
-          <div className="flex items-center gap-2.5 px-5 py-3 rounded-2xl bg-stone-900 text-white shadow-2xl border border-stone-700 text-xs font-bold pointer-events-auto">
-            {toast.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />}
-            {toast.type === 'warning' && <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />}
-            {toast.type === 'info' && <Info className="w-4 h-4 text-indigo-400 shrink-0" />}
-            <span>{toast.message}</span>
-          </div>
-        </motion.div>
-      )}
 
       {/* Mobile-fixed / desktop-in-flow header — rendered OUTSIDE the animated
           wrapper so `position: fixed` targets the viewport (no transformed/filtered
