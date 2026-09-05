@@ -70,7 +70,7 @@ export const Footer: React.FC = () => {
 
   return (
     <footer 
-      className="w-full pt-16 pb-12 mt-16 transition-colors duration-500"
+      className="hidden md:block w-full pt-16 pb-12 mt-16 transition-colors duration-500"
       style={{ 
         backgroundColor: footerBg,
         ...(!isShowcase && {
