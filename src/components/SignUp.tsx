@@ -3,6 +3,14 @@ import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { User, Mail, Lock, Eye, EyeOff, AlertCircle, ArrowRight, Box, Sparkles, KeyRound } from 'lucide-react';
 
+// Kaparehas ng home screen background gradient (tingnan ang GetStarted.tsx)
+const HOME_GRADIENT = `
+  radial-gradient(900px 520px at 50% -6%, rgba(99,102,241,0.14), transparent 62%),
+  radial-gradient(760px 480px at 88% 22%, rgba(56,189,248,0.12), transparent 60%),
+  radial-gradient(820px 560px at 8% 78%, rgba(129,140,248,0.10), transparent 60%),
+  linear-gradient(180deg, #ffffff 0%, #f4f5fb 100%)
+`;
+
 /*
  * Mobile Sign Up screen (opens after clicking "Sign up" sa SignIn).
  *
@@ -27,6 +35,9 @@ export const SignUp: React.FC = () => {
 
   const inputBase =
     'w-full px-4 py-3.5 rounded-2xl bg-white/30 backdrop-blur-md border border-white/60 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-stone-900 transition-shadow placeholder-stone-400 shadow-sm';
+
+  const desktopInputBase =
+    'w-full px-4 py-3.5 rounded-2xl bg-stone-50 border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-stone-900 transition-shadow placeholder-stone-400';
 
   const handleGoogle = () => {
     showToast('Google sign-in is not available yet.', 'info');
@@ -263,6 +274,173 @@ export const SignUp: React.FC = () => {
                 <span>Facebook</span>
               </button>
             </div>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* ===== DESKTOP LAYOUT (gaya sa GetStarted: video LEFT + curved right edge, content RIGHT) ===== */}
+      <div className="hidden md:flex flex-1 min-h-0" style={{ backgroundImage: HOME_GRADIENT }}>
+        {/* HERO VIDEO (slides in from the LEFT, curved RIGHT edge) */}
+        <motion.div
+          className="relative w-[52%] overflow-hidden shrink-0"
+          style={{ borderRadius: '0 999px 999px 0 / 0 250px 250px 0' }}
+          initial={{ x: -90 }}
+          animate={{ x: 0 }}
+          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <img
+            className="absolute inset-0 w-full h-full object-cover object-center"
+            src="/SignIn.jpg"
+            alt="Sign up"
+          />
+        </motion.div>
+
+        {/* WHITE CONTENT (slides in from the RIGHT, scrollable para hindi ma-cut sa maikling screen) */}
+        <motion.div
+          className="flex-1 flex flex-col items-center justify-center px-12 py-10 text-center overflow-y-auto"
+          initial={{ x: 140 }}
+          animate={{ x: 0 }}
+          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <p className="text-xs font-black tracking-[0.45em] uppercase text-indigo-500">Create Account</p>
+
+          <h1 className="mt-4 text-5xl xl:text-6xl leading-tight font-black text-stone-900">Join C-Hub</h1>
+
+          <p className="mt-6 max-w-md text-base xl:text-lg leading-relaxed text-stone-500">
+            Create account to continue shopping.
+          </p>
+
+          {/* Sign-up form card */}
+          <div className="mt-10 w-full max-w-md bg-white border border-stone-100 shadow-xl shadow-stone-200/50 rounded-3xl p-8 text-left">
+            <form onSubmit={handleSignUp} className="w-full space-y-4">
+              {error && (
+                <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-indigo-500 flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-indigo-500" /> Full name
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Juan Dela Cruz"
+                  value={fullName}
+                  onChange={(e) => { setFullName(e.target.value); if (error) setError(''); }}
+                  className={desktopInputBase}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-indigo-500 flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-indigo-500" /> Email
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="you@gmail.com"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); if (error) setError(''); }}
+                  className={desktopInputBase}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-indigo-500 flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-indigo-500" /> Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPw ? 'text' : 'password'}
+                    required
+                    placeholder="At least 8 characters"
+                    value={password}
+                    onChange={(e) => { setPassword(e.target.value); if (error) setError(''); }}
+                    className={desktopInputBase + ' pr-10'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(!showPw)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-500 hover:text-indigo-600 transition-colors p-1"
+                    aria-label="Toggle password visibility"
+                  >
+                    {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-indigo-500 flex items-center gap-1.5">
+                  <KeyRound className="w-3.5 h-3.5 text-indigo-500" /> Confirm password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPw ? 'text' : 'password'}
+                    required
+                    placeholder="Repeat your password"
+                    value={confirmPw}
+                    onChange={(e) => { setConfirmPw(e.target.value); if (error) setError(''); }}
+                    className={desktopInputBase + ' pr-10'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(!showPw)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-500 hover:text-indigo-600 transition-colors p-1"
+                    aria-label="Toggle confirm password visibility"
+                  >
+                    {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-4 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-base font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/25 active:scale-95 transition-all"
+              >
+                Create Account
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </form>
+
+            {/* or divider */}
+            <div className="flex items-center gap-3 w-full mt-6">
+              <span className="flex-1 h-px bg-stone-200" />
+              <span className="text-xs font-bold uppercase tracking-wider text-stone-400">or</span>
+              <span className="flex-1 h-px bg-stone-200" />
+            </div>
+
+            {/* Social sign-in: Google | Facebook (side-by-side) */}
+            <div className="flex gap-3 w-full mt-4">
+              <button
+                onClick={handleGoogle}
+                className="flex-1 flex items-center justify-center gap-2.5 py-3.5 rounded-full bg-stone-50 border border-stone-200 text-sm font-bold text-stone-800 hover:border-indigo-300 hover:bg-indigo-50/40 active:scale-95 transition-all"
+              >
+                {googleG}
+                <span>Google</span>
+              </button>
+              <button
+                onClick={() => showToast('Facebook sign-in is not available yet.', 'info')}
+                className="flex-1 flex items-center justify-center gap-2.5 py-3.5 rounded-full bg-stone-50 border border-stone-200 text-sm font-bold text-stone-800 hover:border-indigo-300 hover:bg-indigo-50/40 active:scale-95 transition-all"
+              >
+                <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0 text-[#1877F2]">
+                  <path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                </svg>
+                <span>Facebook</span>
+              </button>
+            </div>
+
+            <p className="mt-6 text-center text-sm text-stone-500">
+              Already have an account?{' '}
+              <button
+                onClick={() => setPage('signin')}
+                className="text-indigo-600 font-black underline underline-offset-2"
+              >
+                Sign in
+              </button>
+            </p>
           </div>
         </motion.div>
       </div>

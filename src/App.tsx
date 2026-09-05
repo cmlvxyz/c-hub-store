@@ -15,6 +15,8 @@ import { CartPage } from './components/CartPage';
 import { CheckoutPage } from './components/CheckoutPage';
 import { OrdersPage } from './components/OrdersPage';
 import { LoginPage } from './components/LoginPage';
+import { Me } from './components/Me';
+import { EditProfile } from './components/EditProfile';
 import { FAQPage, ShippingPage, ReturnsPage, SizeGuidePage, ContactPage } from './components/SupportPages';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 
@@ -73,6 +75,10 @@ const MainLayout: React.FC = () => {
         return <CheckoutPage />;
       case 'orders':
         return <OrdersPage />;
+      case 'me':
+        return <Me />;
+      case 'edit-profile':
+        return <EditProfile />;
       case 'login':
         return null;
       case 'signin':

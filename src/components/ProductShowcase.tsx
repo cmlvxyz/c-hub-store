@@ -28,7 +28,8 @@ const isLightBg = (hex: string) => LUM(hex) > 0.62;
 const SUB_LABELS: Record<string, string> = {
   tshirt: 'T-Shirt', hoodie: 'Hoodie', sweatshirt: 'Sweatshirt',
   top: 'Top', dress: 'Dress', polo: 'Polo', poloshirt: 'Polo Shirt',
-  jeans: 'Jeans', sneakers: 'Sneakers', boots: 'Boots',
+  jeans: 'Jeans', pants: 'Pants', joggers: 'Joggers', shorts: 'Short', jorts: 'Jorts',
+  sneakers: 'Sneakers', boots: 'Boots',
   sandals: 'Sandals', bags: 'Bag', hats: 'Hat', socks: 'Socks',
 };
 const subLabelOf = (sub: string) => SUB_LABELS[sub] || sub;
@@ -180,11 +181,13 @@ const MobileShowcase: React.FC<{ categoryKey: string }> = ({ categoryKey }) => {
     }
     const activeKey = orderedList[currentProductIndex]?.key;
     const next = filteredList.findIndex((p) => p.key === activeKey);
-    if (next >= 0 && next !== idx) {
+    if (next >= 0 && next !== idx && filteredList.length > 1) {
+      const len = filteredList.length;
+      const fwd = ((next - idx) % len + len) % len;
+      const dir: SlideDir = fwd <= len / 2 ? 'next' : 'prev';
       if (animTimer.current) { clearTimeout(animTimer.current); animTimer.current = null; }
       if (animRaf.current != null) { cancelAnimationFrame(animRaf.current); animRaf.current = null; }
-      setAnim(null);
-      setIdx(next);
+      setAnim({ fromIdx: idx, toIdx: next, dir, phase: 'prep' });
     }
   }, [currentProductIndex, orderedList, filteredList, idx]);
 
@@ -545,7 +548,7 @@ const MobileShowcase: React.FC<{ categoryKey: string }> = ({ categoryKey }) => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-1 px-2 pt-1">
-              <h2 className="text-xs font-black text-stone-900 capitalize">{categoryKey}</h2>
+              <h2 className="text-xs font-black text-stone-900 capitalize">{categoryKey === 'pants' ? 'Bottom' : categoryKey}</h2>
               <button onClick={() => setMenuOpen(false)} className="p-0.5 text-stone-500 cursor-pointer" aria-label="Close">
                 <X className="w-4 h-4" />
               </button>
@@ -585,6 +588,7 @@ const DesktopShowcase: React.FC<{ categoryKey: string }> = ({ categoryKey }) => 
   const [selectedSize, setSelectedSize] = useState<string>('XL');
   const [direction, setDirection] = useState<number>(1);
   const [addedAnimation, setAddedAnimation] = useState<boolean>(false);
+  const lastIndexRef = useRef(currentProductIndex);
 
   const categoryConfig = PRODUCTS_CONFIG[categoryKey]?.[gender] || PRODUCTS_CONFIG['clothes']['men'];
   const currentSubCategory = categoryConfig.subCategories.includes(subCategory)
@@ -593,6 +597,16 @@ const DesktopShowcase: React.FC<{ categoryKey: string }> = ({ categoryKey }) => 
 
   const currentProducts = withWhiteFirst(categoryConfig.products[currentSubCategory] || []);
   const activeProduct = currentProducts[currentProductIndex] || currentProducts[0];
+
+  useEffect(() => {
+    const prev = lastIndexRef.current;
+    if (prev !== currentProductIndex) {
+      const len = currentProducts.length || 1;
+      const fwd = ((currentProductIndex - prev) % len + len) % len;
+      setDirection(fwd <= len / 2 ? 1 : -1);
+      lastIndexRef.current = currentProductIndex;
+    }
+  }, [currentProductIndex, currentProducts.length]);
 
   const defaultSizes = ['XL', '2XL', '3XL', '4XL'];
   const availableSizes = categoryConfig.sizes[currentSubCategory] || defaultSizes;
@@ -917,12 +931,12 @@ const DesktopShowcase: React.FC<{ categoryKey: string }> = ({ categoryKey }) => 
               className={`px-4 py-2 rounded-full font-bold text-xs flex items-center gap-1.5 transition-all duration-300 shadow-lg cursor-pointer ${
                 addedAnimation ? 'bg-emerald-600 text-white scale-105'
                   : isDarkTheme ? 'bg-white text-stone-900 hover:bg-stone-100'
-                  : 'bg-stone-900 text-white hover:bg-stone-800'
+                  : 'bg-indigo-500 text-white hover:bg-stone-800'
               }`}>
               {addedAnimation ? (
                 <><Check className="w-3.5 h-3.5" /><span>Added</span></>
               ) : (
-                <><ShoppingBag className="w-3.5 h-3.5" /><span>Add to cart</span></>
+                <><ShoppingBag className="w-3.5 h-3.5" /><span>Cart</span></>
               )}
             </button>
           )}

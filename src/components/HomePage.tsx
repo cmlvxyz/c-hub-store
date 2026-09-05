@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { PageType, GenderType } from '../types';
-import { ArrowRight, Shirt, Footprints, Tag, Glasses, CheckCircle2, Search, ShoppingBag } from 'lucide-react';
+import { ArrowRight, Shirt, Footprints, Tag, Glasses, CheckCircle2, ShoppingBag } from 'lucide-react';
 import { ProductVisual } from './ProductVisual';
 
 export const HomePage: React.FC = () => {
@@ -11,13 +11,13 @@ export const HomePage: React.FC = () => {
   const categories: { id: PageType; title: string; desc: string; icon: React.ReactNode; bg: string; defaultGender: GenderType }[] = [
     { id: 'clothes', title: 'Clothes', desc: 'Tees, hoodies & sweatshirts', icon: <Shirt className="w-7 h-7" />, bg: 'bg-[#1a1716]', defaultGender: 'men' },
     { id: 'shoes', title: 'Footwear', desc: 'Everyday street footwear', icon: <Footprints className="w-7 h-7" />, bg: 'bg-[#27345b]', defaultGender: 'men' },
-    { id: 'pants', title: 'Pants', desc: 'Denim, joggers & cargo', icon: <Tag className="w-7 h-7" />, bg: 'bg-[#3f3128]', defaultGender: 'men' },
+    { id: 'pants', title: 'Bottom', desc: 'Jeans, pants, joggers & jorts', icon: <Tag className="w-7 h-7" />, bg: 'bg-[#3f3128]', defaultGender: 'men' },
     { id: 'underwear', title: 'Underwear', desc: 'Everyday comfort basics', icon: <Shirt className="w-7 h-7" />, bg: 'bg-[#432838]', defaultGender: 'men' },
     { id: 'accessories', title: 'Accessories', desc: 'Finish your silhouette', icon: <Glasses className="w-7 h-7" />, bg: 'bg-[#264441]', defaultGender: 'men' }
   ];
 
-  // Mobile-only state: search for the middle home content.
-  const [mobileSearch, setMobileSearch] = React.useState('');
+  // Mobile-only state: "View all" expand toggle for Popular Products.
+  const [popularAll, setPopularAll] = React.useState(false);
 
   interface GenderTile {
     label: string;
@@ -40,7 +40,7 @@ export const HomePage: React.FC = () => {
     { label: 'T-Shirts', category: 'clothes', menSub: 'tshirt', womenSub: 'tshirt', boysSub: 'tshirt', girlsSub: 'tshirt', visSub: 'tshirt', womenLabel: 'T-Shirts', girlsLabel: 'T-Shirts', boysLabel: 'T-shirts', colorName: 'White', bgColor: '#F5F5F5' },
     { label: 'Sweatshirts', category: 'clothes', menSub: 'sweatshirt', womenSub: 'top', boysSub: 'polo', girlsSub: 'top', visSub: 'sweatshirt', womenLabel: 'Top', girlsLabel: 'Top', boysLabel: 'Polo', colorName: 'White', bgColor: '#F5F4EF' },
     { label: 'Hoodie', category: 'clothes', menSub: 'hoodie', womenSub: 'dress', boysSub: 'poloshirt', girlsSub: 'dress', visSub: 'hoodie', womenLabel: 'Dress', girlsLabel: 'Dress', boysLabel: 'Polo-shirt', colorName: 'Beige', bgColor: '#CEB699' },
-    { label: 'Pants', category: 'pants', menSub: 'jeans', womenSub: 'jeans', boysSub: 'jeans', girlsSub: 'jeans', visSub: 'jeans', womenLabel: 'Pants', girlsLabel: 'Pants', boysLabel: 'Pants', colorName: 'Light Stone', bgColor: '#D9D9D9' },
+    { label: 'Bottom', category: 'pants', menSub: 'jeans', womenSub: 'jeans', boysSub: 'jeans', girlsSub: 'jeans', visSub: 'jeans', womenLabel: 'Bottom', girlsLabel: 'Bottom', boysLabel: 'Bottom', colorName: 'Light Stone', bgColor: '#D9D9D9' },
     { label: 'Jeans', category: 'pants', menSub: 'jeans', womenSub: 'jeans', boysSub: 'jeans', girlsSub: 'jeans', visSub: 'jeans', womenLabel: 'Jeans', girlsLabel: 'Jeans', boysLabel: 'Jeans', colorName: 'Light Stone', bgColor: '#D9D9D9' },
     { label: 'Slacks', category: 'pants', menSub: 'jeans', womenSub: 'jeans', boysSub: 'jeans', girlsSub: 'jeans', visSub: 'jeans', womenLabel: 'Slacks', girlsLabel: 'Slacks', boysLabel: 'Slacks', colorName: 'Light Stone', bgColor: '#D9D9D9' },
     { label: 'Footwear', category: 'shoes', menSub: 'sneakers', womenSub: 'sneakers', boysSub: 'sneakers', girlsSub: 'sneakers', visSub: 'sneakers', womenLabel: 'Footwear', girlsLabel: 'Footwear', boysLabel: 'Footwear', colorName: 'Chalk White', bgColor: '#F5F5F5' },
@@ -76,9 +76,7 @@ export const HomePage: React.FC = () => {
 
   const orderedGenderTiles = clothesOrder.map((i) => genderTiles[i]);
 
-  const filteredGenderTiles = orderedGenderTiles.filter((t) =>
-    t.label.toLowerCase().includes(mobileSearch.toLowerCase())
-  );
+  const filteredGenderTiles = orderedGenderTiles;
 
   interface GenderProduct {
     id: string;
@@ -141,9 +139,7 @@ export const HomePage: React.FC = () => {
     ]
   };
 
-  const activeGenderProducts = genderProducts[gender].filter((p) =>
-    `${p.name} ${p.color}`.toLowerCase().includes(mobileSearch.toLowerCase())
-  );
+  const activeGenderProducts = genderProducts[gender];
 
   const openProduct = (p: GenderProduct) => {
     setPage(p.category, p.sub, gender);
@@ -156,7 +152,7 @@ export const HomePage: React.FC = () => {
       'T-Shirts': { men: '/images/clothes/men/t-shirts/white.png', women: '/images/clothes/men/t-shirts/white.png', boys: '/images/clothes/men/t-shirts/white.png', girls: '/images/clothes/men/t-shirts/white.png' },
       Sweatshirts: { men: '/images/clothes/men/sweatshirts/white1.png', women: '/images/clothes/women/top/top1.png', boys: null, girls: '/images/clothes/women/top/top1.png' },
       Hoodie: { men: '/images/clothes/men/hoodie/beige.png', women: '/images/clothes/women/dress/dress1.png', boys: null, girls: '/images/clothes/women/dress/dress1.png' },
-      Pants: { men: '/images/pants/men/pants/pants3.png', women: null, boys: '/images/pants/boys/pants/bpants1.png', girls: null },
+      Bottom: { men: '/images/pants/men/pants/pants3.png', women: null, boys: '/images/pants/boys/pants/bpants1.png', girls: null },
       Jeans: { men: null, women: null, boys: '/images/pants/boys/pants/bpants5.png', girls: null },
       Slacks: { men: null, women: null, boys: '/images/pants/boys/pants/bpants1.png', girls: null }
     };
@@ -205,41 +201,64 @@ export const HomePage: React.FC = () => {
 
       {/* ============================================================
           MOBILE HOME (md:hidden) — middle content only.
-          Order: Search bar -> Hero -> Categories -> Popular Products.
+          Order: Hero -> Categories -> Popular Products.
           ============================================================ */}
       <div className="md:hidden w-full px-4 space-y-8 pb-4">
 
-        {/* Mobile Search Bar */}
-        <div className="relative">
-          <input
-            type="text"
-            value={mobileSearch}
-            onChange={(e) => setMobileSearch(e.target.value)}
-            placeholder="Search products..."
-            className="w-full pl-5 pr-11 py-3 rounded-full bg-white border border-indigo-200 text-sm text-stone-900 placeholder-stone-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-all"
-          />
-          <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-400 pointer-events-none" />
-        </div>
+        {/* Mobile Hero — WALANG background panel, walang paragraph, may mini hang tags + featured piece */}
+        <section className="relative px-1 pt-2 pb-2">
+          <div className="flex items-center gap-5">
+            {/* Left: text */}
+            <div className="relative z-10 flex-1 min-w-0">
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100/80 text-indigo-700 text-[10px] font-black uppercase tracking-widest border border-indigo-200">
+                New Season • 2026
+              </span>
+              <h1 className="mt-3 text-[22px] sm:text-3xl font-black font-serif tracking-tight leading-[1.05] text-stone-900">
+                Wear the <span className="italic">story</span> you write.
+              </h1>
+              <p className="mt-2 text-[12px] leading-relaxed font-medium text-stone-500 text-balance">
+                Premium streetwear cut for confidence — heavyweight cotton, honest pricing, everyday comfort.
+              </p>
+              <button
+                onClick={() => setPage('shop')}
+                className="inline-flex items-center gap-2 mt-4 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-full text-xs shadow-lg shadow-indigo-600/30 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              >
+                <ShoppingBag className="w-3.5 h-3.5" />
+                <span>SHOP</span>
+              </button>
+            </div>
 
-        {/* Mobile Hero */}
-        <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-indigo-600 via-indigo-700 to-indigo-900 text-white p-7">
-          <div className="relative z-10 space-y-4">
-            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-[10px] font-black uppercase tracking-widest border border-white/20">
-              New Season • 2026
-            </span>
-            <h1 className="text-4xl font-black font-serif tracking-tight leading-[1.05] text-white">
-              Wear the <span className="italic">story</span> you write.
-            </h1>
-            <p className="text-white/80 text-[13px] leading-relaxed font-medium">
-              Premium streetwear cut for confidence — heavyweight cotton, honest pricing, everyday comfort.
-            </p>
-            <button
-              onClick={() => setPage('shop')}
-              className="inline-flex items-center gap-2 mt-1 px-6 py-3 bg-white text-indigo-700 font-bold rounded-full text-sm shadow-lg shadow-black/20 hover:scale-105 active:scale-95 transition-all cursor-pointer"
-            >
-              <ShoppingBag className="w-4 h-4" />
-              <span>SHOP</span>
-            </button>
+            {/* Right: Featured Piece only */}
+            <div className="w-32 h-32 sm:w-44 sm:h-44 shrink-0">
+              <motion.div
+                whileHover={{ scale: 1.05, rotate: 2 }}
+                onClick={() => setPage('clothes', 'tshirt', 'men')}
+                className="relative w-full h-full rounded-2xl sm:rounded-3xl bg-white/70 backdrop-blur-sm border border-stone-100 shadow-2xl flex flex-col items-center justify-center group cursor-pointer overflow-hidden p-2 z-10"
+              >
+                <div className="absolute top-2 right-2 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                  Featured
+                </div>
+                <img
+                  src="/images/clothes/men/t-shirts/white.png"
+                  alt="Featured Streetwear Tee"
+                  className="w-16 h-16 sm:w-24 sm:h-24 object-contain group-hover:scale-110 transition-transform duration-500"
+                  onError={(e) => {
+                    e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect width="200" height="200" fill="%234f46e5"/%3E%3Ctext x="100" y="100" text-anchor="middle" dy=".3em" fill="white" font-size="16"%3EC-HUB TEE%3C/text%3E%3C/svg%3E';
+                  }}
+                />
+                <p className="text-[9px] sm:text-[10px] font-bold text-stone-800 uppercase tracking-wider mt-1 group-hover:text-indigo-600 transition-colors">
+                  Explore T-Shirts →
+                </p>
+              </motion.div>
+            </div>
+          </div>
+
+          {/* Trust Badges */}
+          <div className="pt-4 flex flex-wrap items-center gap-5 text-xs text-stone-500 font-semibold">
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>100% Cotton & Preshrunk</span>
+            </div>
           </div>
         </section>
 
@@ -302,7 +321,7 @@ export const HomePage: React.FC = () => {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-stone-500 py-6 text-center">No categories found for "{mobileSearch}".</p>
+            <p className="text-sm text-stone-500 py-6 text-center">No categories found.</p>
           )}
         </section>
 
@@ -316,17 +335,21 @@ export const HomePage: React.FC = () => {
               <h2 className="text-xl font-black font-serif text-stone-900 mt-0.5">Popular Products</h2>
             </div>
             <button
-              onClick={() => setPage('shop')}
+              onClick={() => setPopularAll(v => !v)}
               className="text-[11px] font-extrabold uppercase tracking-wider text-indigo-600 flex items-center gap-1 cursor-pointer"
             >
-              <span>View all</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>{popularAll ? 'Show less' : 'View all'}</span>
+              <ArrowRight className={`w-3.5 h-3.5 transition-transform duration-300 ${popularAll ? 'rotate-180' : ''}`} />
             </button>
           </div>
 
           {activeGenderProducts.length > 0 ? (
-            <div className="grid grid-cols-3 gap-2.5">
-              {activeGenderProducts.map((p) => (
+            <div
+              className={`grid grid-cols-3 gap-2.5 ${
+                popularAll ? 'overflow-y-auto no-scrollbar max-h-[35rem] pr-1' : ''
+              }`}
+            >
+              {(popularAll ? activeGenderProducts : activeGenderProducts.slice(0, 9)).map((p) => (
                 <button
                   key={p.id}
                   onClick={() => openProduct(p)}
@@ -363,7 +386,7 @@ export const HomePage: React.FC = () => {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-stone-500 py-6 text-center">No products found for "{mobileSearch}".</p>
+            <p className="text-sm text-stone-500 py-6 text-center">No products found.</p>
           )}
         </section>
       </div>

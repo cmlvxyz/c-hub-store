@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
-import { ShoppingCart, Bell, Search, X, LogOut, Package, ChevronDown, Box, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ShoppingCart, Bell, Search, X, LogOut, Package, ChevronDown, Box, CheckCircle2, AlertCircle, User } from 'lucide-react';
 import { PageType } from '../types';
 
 export const Header: React.FC = () => {
-  const { page, setPage, cart, orders, user, logout, isDarkTheme, notifications, unreadCount, markNotificationsRead, removeNotification, clearNotifications, searchQuery, setSearchQuery } = useStore();
+  const { page, setPage, cart, orders, user, customerInfo, logout, isDarkTheme, notifications, unreadCount, markNotificationsRead, removeNotification, clearNotifications, searchQuery, setSearchQuery } = useStore();
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [shopSearchOpen, setShopSearchOpen] = useState(false);
@@ -77,12 +77,33 @@ export const Header: React.FC = () => {
   const renderUserDropdown = () =>
     userDropdownOpen && (
       <div className="absolute right-0 mt-2 w-52 bg-white text-stone-800 rounded-2xl shadow-2xl border border-stone-100 py-2 z-50 animate-fadeIn">
-        <div className="px-4 py-2.5 border-b border-stone-100">
-          <p className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider">Signed in as</p>
-          <p className="font-bold text-sm text-stone-900 truncate">
-            {user.username || 'User'}
-          </p>
+        <div className="px-4 py-2.5 border-b border-stone-100 flex items-center gap-3">
+          {customerInfo?.avatar ? (
+            <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-indigo-200 shrink-0">
+              <img src={customerInfo.avatar} alt="Profile" className="w-full h-full object-cover" />
+            </div>
+          ) : (
+            <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+              <User className="w-5 h-5" />
+            </div>
+          )}
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider">Signed in as</p>
+            <p className="font-bold text-sm text-stone-900 truncate">
+              {customerInfo?.name || user.username || 'User'}
+            </p>
+          </div>
         </div>
+        <button
+          onClick={() => {
+            handleNavClick('me');
+            setUserDropdownOpen(false);
+          }}
+          className="w-full text-left px-4 py-2.5 text-xs font-bold hover:bg-stone-50 flex items-center gap-2 text-stone-700"
+        >
+          <User className="w-4 h-4 text-indigo-500" />
+          My Account
+        </button>
         {orders.length > 0 && (
           <button
             onClick={() => {
@@ -321,6 +342,20 @@ export const Header: React.FC = () => {
               </div>
             ) : (
               <div className="flex items-center gap-3">
+                <button
+                  id="navMeBtn"
+                  onClick={() => handleNavClick('me')}
+                  className={`flex items-center gap-2 py-2 px-4 rounded-full font-bold text-xs transition-all cursor-pointer ${
+                    page === 'me'
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                      : isDarkTheme
+                      ? 'border border-white/40 text-white hover:bg-white/10'
+                      : 'bg-stone-100 text-stone-800 hover:bg-stone-200'
+                  }`}
+                >
+                  <User className="w-4 h-4" />
+                  Me
+                </button>
                 <button
                   id="navLoginBtn"
                   onClick={() => handleNavClick('login')}

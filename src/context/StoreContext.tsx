@@ -328,8 +328,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [user]);
 
   // ── Cross-tab sync: iPhone simulator + MacBook tabs stay in lockstep ──
-  // page/gender/subCategory are broadcast to localStorage; every other tab of the
-  // same browser/origin listens for `storage` events and adopts the new state.
+  // page/gender/subCategory/currentProductIndex are broadcast to localStorage;
+  // every other tab of the same browser/origin listens for `storage` events and
+  // adopts the new state.
   const CROSS_TAB_KEY = 'chub_cross_tab_session';
   const crossTabReadyRef = useRef(false);
   const crossTabApplyRef = useRef(false);
@@ -345,11 +346,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return;
     }
     try {
-      localStorage.setItem(CROSS_TAB_KEY, JSON.stringify({ page, gender, subCategory }));
+      localStorage.setItem(CROSS_TAB_KEY, JSON.stringify({ page, gender, subCategory, currentProductIndex }));
     } catch (e) {
       console.error('Failed to broadcast cross-tab state:', e);
     }
-  }, [page, gender, subCategory]);
+  }, [page, gender, subCategory, currentProductIndex]);
 
   useEffect(() => {
     const handler = (e: StorageEvent) => {
@@ -364,18 +365,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const sub = cfg?.subCategories.includes(data.subCategory)
           ? data.subCategory
           : cfg?.defaultSubCategory;
+        const pageChanged = data.page !== page;
+        const idxChanged = typeof data.currentProductIndex === 'number' && data.currentProductIndex !== currentProductIndex;
         crossTabApplyRef.current = true;
         setPageState(data.page);
         if (data.gender && data.gender !== gender) setGenderState(data.gender);
         if (sub && sub !== subCategory) setSubCategoryState(sub);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (idxChanged) setCurrentProductIndex(data.currentProductIndex);
+        if (pageChanged) window.scrollTo({ top: 0, behavior: 'smooth' });
       } catch (e) {
         console.error('Failed to apply cross-tab state:', e);
       }
     };
     window.addEventListener('storage', handler);
     return () => window.removeEventListener('storage', handler);
-  }, [gender, subCategory]);
+  }, [gender, subCategory, currentProductIndex, page]);
 
   useEffect(() => {
     let es: EventSource | null = null;

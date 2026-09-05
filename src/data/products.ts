@@ -508,9 +508,9 @@ export const PRODUCTS_CONFIG: Record<string, Record<GenderType, CategoryData>> =
     }
   },
   pants: {
-    men: {
-      subCategories: ['jeans', 'shorts', 'joggers'],
-      subCategoryLabels: { jeans: 'Jeans', shorts: 'Shorts', joggers: 'Joggers' },
+men: {
+      subCategories: ['jeans', 'pants', 'joggers', 'shorts', 'jorts'],
+      subCategoryLabels: { jeans: 'Jeans', pants: 'Pants', joggers: 'Joggers', shorts: 'Short', jorts: 'Jorts' },
       defaultSubCategory: 'jeans',
       headlines: {
         jeans: {
@@ -533,17 +533,35 @@ export const PRODUCTS_CONFIG: Record<string, Record<GenderType, CategoryData>> =
           desc: 'Soft and cozy joggers perfect for lounging, workouts, or running errands. Comfort meets style.',
           price: 1499,
           original: 2199
+        },
+        pants: {
+          main: 'Chino Trousers',
+          sub: 'Sharp & Easy.',
+          desc: 'Crisp cotton chinos that move from work to weekend. Tailored fit, premium feel.',
+          price: 1599,
+          original: 2299
+        },
+        jorts: {
+          main: 'Classic Jorts',
+          sub: 'Cut-Off Cool.',
+          desc: 'Denim shorts with a rugged finish — built for sunny days and laid-back weekends.',
+          price: 1199,
+          original: 1699
         }
       },
       sizes: {
         jeans: ['28', '30', '32', '34', '36'],
         shorts: ['28', '30', '32', '34', '36'],
-        joggers: ['S', 'M', 'L', 'XL']
+        joggers: ['S', 'M', 'L', 'XL'],
+        pants: ['28', '30', '32', '34', '36'],
+        jorts: ['28', '30', '32', '34', '36']
       },
       basePrices: {
         jeans: { price: 1799, original: 2499 },
         shorts: { price: 1299, original: 1899 },
-        joggers: { price: 1499, original: 2199 }
+        joggers: { price: 1499, original: 2199 },
+        pants: { price: 1599, original: 2299 },
+        jorts: { price: 1199, original: 1699 }
       },
       products: {
         jeans: [
@@ -569,27 +587,49 @@ export const PRODUCTS_CONFIG: Record<string, Record<GenderType, CategoryData>> =
           { name: 'Fleece Joggers - Ochre', image: 'pants4.png', colorName: 'Ochre', bgColor: '#FFE44D', textColor: '#1d1a18' },
           { name: 'Fleece Joggers - Crimson', image: 'pants5.png', colorName: 'Crimson', bgColor: '#D44545', textColor: '#FFFFFF' },
           { name: 'Fleece Joggers - Forest', image: 'pants6.png', colorName: 'Forest', bgColor: '#2A8C5E', textColor: '#FFFFFF' }
+        ],
+        pants: [
+          { name: 'Relaxed Chinos - Off White', image: 'pants1.png', colorName: 'Off White', bgColor: '#F5F5F5', textColor: '#1d1a18' },
+          { name: 'Relaxed Chinos - Charcoal', image: 'pants2.png', colorName: 'Charcoal', bgColor: '#4A4A4A', textColor: '#FFFFFF' },
+          { name: 'Relaxed Chinos - Navy', image: 'pants3.png', colorName: 'Navy', bgColor: '#2A3459', textColor: '#FFFFFF' },
+          { name: 'Relaxed Chinos - Sand', image: 'pants4.png', colorName: 'Sand', bgColor: '#CEB699', textColor: '#1d1a18' },
+          { name: 'Relaxed Chinos - Olive', image: 'pants6.png', colorName: 'Olive', bgColor: '#5A6B4F', textColor: '#FFFFFF' },
+          { name: 'Relaxed Chinos - Black', image: 'pants3.png', colorName: 'Black', bgColor: '#1A1716', textColor: '#FFFFFF' }
+        ],
+        jorts: [
+          { name: 'Classic Jorts - Light Wash', image: 'pants1.png', colorName: 'Light Wash', bgColor: '#CDD6DD', textColor: '#1d1a18' },
+          { name: 'Classic Jorts - Mid Wash', image: 'pants2.png', colorName: 'Mid Wash', bgColor: '#8FA8C8', textColor: '#1d1a18' },
+          { name: 'Classic Jorts - Stone Wash', image: 'pants3.png', colorName: 'Stone Wash', bgColor: '#D8D8D8', textColor: '#1d1a18' },
+          { name: 'Classic Jorts - Faded Blue', image: 'pants4.png', colorName: 'Faded Blue', bgColor: '#A9BBD0', textColor: '#1d1a18' },
+          { name: 'Classic Jorts - Indigo', image: 'pants5.png', colorName: 'Indigo', bgColor: '#223A67', textColor: '#FFFFFF' },
+          { name: 'Classic Jorts - Dark Wash', image: 'pants6.png', colorName: 'Dark Wash', bgColor: '#27314F', textColor: '#FFFFFF' }
         ]
       }
     },
     women: {
-      subCategories: ['jeans', 'shorts', 'joggers'],
-      subCategoryLabels: { jeans: 'Jeans', shorts: 'Shorts', joggers: 'Joggers' },
+      subCategories: ['jeans', 'pants', 'joggers', 'shorts', 'jorts'],
+      subCategoryLabels: { jeans: 'Jeans', pants: 'Pants', joggers: 'Joggers', shorts: 'Short', jorts: 'Jorts' },
       defaultSubCategory: 'jeans',
       headlines: {
         jeans: { main: 'High Rise Denim', sub: 'Flattering & Clean.', desc: 'Tailored fit high-rise jeans crafted with stretch denim for all-day elegance.', price: 1799, original: 2499 },
         shorts: { main: 'Breezy Cutoffs', sub: 'Effortless Summer.', desc: 'High-waisted lightweight cotton shorts built for warm-weather adventures.', price: 1299, original: 1899 },
-        joggers: { main: 'Lounge Sweatpants', sub: 'Supreme Softness.', desc: 'Plush cloud-soft joggers with tapered ribbed cuffs and drawstring waist.', price: 1499, original: 2199 }
+        joggers: { main: 'Lounge Sweatpants', sub: 'Supreme Softness.', desc: 'Plush cloud-soft joggers with tapered ribbed cuffs and drawstring waist.', price: 1499, original: 2199 },
+        pants: { main: 'Tailored Trousers', sub: 'Polished Lines.', desc: 'Flattering wide-leg trousers in soft suiting fabric for effortless everyday polish.', price: 1599, original: 2299 },
+        jorts: { main: 'High-Rise Jorts', sub: 'Denim Days.', desc: 'Easy high-rise denim shorts made for warm weather and casual city style.', price: 1199, original: 1699 }
       },
       sizes: {
         jeans: ['24', '26', '28', '30', '32'],
         shorts: ['24', '26', '28', '30', '32'],
-        joggers: ['XS', 'S', 'M', 'L', 'XL']
+        joggers: ['XS', 'S', 'M', 'L', 'XL'],
+        pants: ['24', '26', '28', '30', '32'],
+        jorts: ['24', '26', '28', '30', '32']
       },
       basePrices: {
         jeans: { price: 1799, original: 2499 },
         shorts: { price: 1299, original: 1899 },
-        joggers: { price: 1499, original: 2199 }
+        joggers: { price: 1499, original: 2199 },
+        pants: { price: 1599, original: 2299 },
+        jorts: { price: 1199, original: 1699 }
       },
       products: {
         jeans: [
@@ -615,27 +655,49 @@ export const PRODUCTS_CONFIG: Record<string, Record<GenderType, CategoryData>> =
           { name: 'Women Cloud Jogger - Pastel Yellow', image: 'pants4.png', colorName: 'Pastel Yellow', bgColor: '#FFE44D', textColor: '#1d1a18' },
           { name: 'Women Cloud Jogger - Cherry', image: 'pants5.png', colorName: 'Cherry', bgColor: '#D44545', textColor: '#FFFFFF' },
           { name: 'Women Cloud Jogger - Moss', image: 'pants6.png', colorName: 'Moss', bgColor: '#2A8C5E', textColor: '#FFFFFF' }
+        ],
+        pants: [
+          { name: 'Tailored Trousers - Sand', image: 'pants1.png', colorName: 'Sand', bgColor: '#CEB699', textColor: '#1d1a18' },
+          { name: 'Tailored Trousers - Charcoal', image: 'pants2.png', colorName: 'Charcoal', bgColor: '#4A4A4A', textColor: '#FFFFFF' },
+          { name: 'Tailored Trousers - Slate', image: 'pants3.png', colorName: 'Slate', bgColor: '#5A7D92', textColor: '#FFFFFF' },
+          { name: 'Tailored Trousers - Ivory', image: 'pants4.png', colorName: 'Ivory', bgColor: '#F3EFE6', textColor: '#1d1a18' },
+          { name: 'Tailored Trousers - Forest', image: 'pants6.png', colorName: 'Forest', bgColor: '#2A8C5E', textColor: '#FFFFFF' },
+          { name: 'Tailored Trousers - Black', image: 'pants3.png', colorName: 'Black', bgColor: '#1A1716', textColor: '#FFFFFF' }
+        ],
+        jorts: [
+          { name: 'High-Rise Jorts - Light Wash', image: 'pants1.png', colorName: 'Light Wash', bgColor: '#CDD6DD', textColor: '#1d1a18' },
+          { name: 'High-Rise Jorts - Faded Blue', image: 'pants2.png', colorName: 'Faded Blue', bgColor: '#A9BBD0', textColor: '#1d1a18' },
+          { name: 'High-Rise Jorts - Stone Wash', image: 'pants3.png', colorName: 'Stone Wash', bgColor: '#D8D8D8', textColor: '#1d1a18' },
+          { name: 'High-Rise Jorts - Butter', image: 'pants4.png', colorName: 'Butter', bgColor: '#FFE44D', textColor: '#1d1a18' },
+          { name: 'High-Rise Jorts - Indigo', image: 'pants5.png', colorName: 'Indigo', bgColor: '#223A67', textColor: '#FFFFFF' },
+          { name: 'High-Rise Jorts - Dark Wash', image: 'pants6.png', colorName: 'Dark Wash', bgColor: '#27314F', textColor: '#FFFFFF' }
         ]
       }
     },
     boys: {
-      subCategories: ['jeans', 'shorts', 'joggers'],
-      subCategoryLabels: { jeans: 'Jeans', shorts: 'Shorts', joggers: 'Joggers' },
+      subCategories: ['jeans', 'pants', 'joggers', 'shorts', 'jorts'],
+      subCategoryLabels: { jeans: 'Jeans', pants: 'Pants', joggers: 'Joggers', shorts: 'Short', jorts: 'Jorts' },
       defaultSubCategory: 'jeans',
       headlines: {
         jeans: { main: 'Boys Denim', sub: 'Sturdy & Cool.', desc: 'Durable stretch denim pants engineered to keep up with daily playtime and style.', price: 1499, original: 2099 },
         shorts: { main: 'Active Shorts', sub: 'Ready for Adventure.', desc: 'Flexible, breathable cotton twill shorts made for high-energy play.', price: 999, original: 1499 },
-        joggers: { main: 'Boys Track Joggers', sub: 'Pure Ease.', desc: 'Cozy brushed fleece joggers with reinforced knees and secure pockets.', price: 1199, original: 1699 }
+        joggers: { main: 'Boys Track Joggers', sub: 'Pure Ease.', desc: 'Cozy brushed fleece joggers with reinforced knees and secure pockets.', price: 1199, original: 1699 },
+        pants: { main: 'Boys Chinos', sub: 'Smart & Snappy.', desc: 'Comfortable stretch chinos with an adjustable waist for growing boys on the move.', price: 1199, original: 1699 },
+        jorts: { main: 'Denim Jorts', sub: 'Play-Ready.', desc: 'Tough denim-cut shorts with reinforced stitching built for non-stop adventure.', price: 999, original: 1499 }
       },
       sizes: {
         jeans: ['6', '8', '10', '12', '14'],
         shorts: ['6', '8', '10', '12', '14'],
-        joggers: ['S', 'M', 'L', 'XL']
+        joggers: ['S', 'M', 'L', 'XL'],
+        pants: ['6', '8', '10', '12', '14'],
+        jorts: ['6', '8', '10', '12', '14']
       },
       basePrices: {
         jeans: { price: 1499, original: 2099 },
         shorts: { price: 999, original: 1499 },
-        joggers: { price: 1199, original: 1699 }
+        joggers: { price: 1199, original: 1699 },
+        pants: { price: 1199, original: 1699 },
+        jorts: { price: 999, original: 1499 }
       },
       products: {
         jeans: [
@@ -661,27 +723,49 @@ export const PRODUCTS_CONFIG: Record<string, Record<GenderType, CategoryData>> =
           { name: 'Boys Track Jogger - Mustard', image: 'pants4.png', colorName: 'Mustard', bgColor: '#FFE44D', textColor: '#1d1a18' },
           { name: 'Boys Track Jogger - Crimson', image: 'pants5.png', colorName: 'Crimson', bgColor: '#D44545', textColor: '#FFFFFF' },
           { name: 'Boys Track Jogger - Spruce', image: 'pants6.png', colorName: 'Spruce', bgColor: '#2A8C5E', textColor: '#FFFFFF' }
+        ],
+        pants: [
+          { name: 'Boys Chinos - Khaki', image: 'pants1.png', colorName: 'Khaki', bgColor: '#CEB699', textColor: '#1d1a18' },
+          { name: 'Boys Chinos - Charcoal', image: 'pants2.png', colorName: 'Charcoal', bgColor: '#4A4A4A', textColor: '#FFFFFF' },
+          { name: 'Boys Chinos - Navy', image: 'pants3.png', colorName: 'Navy', bgColor: '#2A3459', textColor: '#FFFFFF' },
+          { name: 'Boys Chinos - Sandstone', image: 'pants4.png', colorName: 'Sandstone', bgColor: '#D8D8D8', textColor: '#1d1a18' },
+          { name: 'Boys Chinos - Olive', image: 'pants6.png', colorName: 'Olive', bgColor: '#5A6B4F', textColor: '#FFFFFF' },
+          { name: 'Boys Chinos - Black', image: 'pants3.png', colorName: 'Black', bgColor: '#1A1716', textColor: '#FFFFFF' }
+        ],
+        jorts: [
+          { name: 'Boys Denim Jorts - Light Wash', image: 'pants1.png', colorName: 'Light Wash', bgColor: '#CDD6DD', textColor: '#1d1a18' },
+          { name: 'Boys Denim Jorts - Mid Wash', image: 'pants2.png', colorName: 'Mid Wash', bgColor: '#8FA8C8', textColor: '#1d1a18' },
+          { name: 'Boys Denim Jorts - Stone Wash', image: 'pants3.png', colorName: 'Stone Wash', bgColor: '#D8D8D8', textColor: '#1d1a18' },
+          { name: 'Boys Denim Jorts - Faded Blue', image: 'pants4.png', colorName: 'Faded Blue', bgColor: '#A9BBD0', textColor: '#1d1a18' },
+          { name: 'Boys Denim Jorts - Indigo', image: 'pants5.png', colorName: 'Indigo', bgColor: '#223A67', textColor: '#FFFFFF' },
+          { name: 'Boys Denim Jorts - Dark Wash', image: 'pants6.png', colorName: 'Dark Wash', bgColor: '#27314F', textColor: '#FFFFFF' }
         ]
       }
     },
     girls: {
-      subCategories: ['jeans', 'shorts', 'joggers'],
-      subCategoryLabels: { jeans: 'Jeans', shorts: 'Shorts', joggers: 'Joggers' },
+      subCategories: ['jeans', 'pants', 'joggers', 'shorts', 'jorts'],
+      subCategoryLabels: { jeans: 'Jeans', pants: 'Pants', joggers: 'Joggers', shorts: 'Short', jorts: 'Jorts' },
       defaultSubCategory: 'jeans',
       headlines: {
         jeans: { main: 'Girls Denim', sub: 'Comfort & Style.', desc: 'Super-soft elasticated stretch denim created for flexibility and everyday charm.', price: 1499, original: 2099 },
         shorts: { main: 'Girls Summer Shorts', sub: 'Sun-Kissed Comfort.', desc: 'Lightweight breezy cotton shorts designed for warm days and joyful play.', price: 999, original: 1499 },
-        joggers: { main: 'Girls Soft Joggers', sub: 'Cozy Vibes.', desc: 'Pastel and neutral cozy joggers tailored for school, sports, and weekend relaxation.', price: 1199, original: 1699 }
+        joggers: { main: 'Girls Soft Joggers', sub: 'Cozy Vibes.', desc: 'Pastel and neutral cozy joggers tailored for school, sports, and weekend relaxation.', price: 1199, original: 1699 },
+        pants: { main: 'Pleated Trousers', sub: 'Sweet & Tidy.', desc: 'Soft pleated trousers with an elastic waist for all-day comfort and charm.', price: 1199, original: 1699 },
+        jorts: { main: 'Girls Denim Jorts', sub: 'Sunshine Style.', desc: 'Comfy elastic-waist denim jorts perfect for playdates and summer strolls.', price: 999, original: 1499 }
       },
       sizes: {
         jeans: ['6', '8', '10', '12', '14'],
         shorts: ['6', '8', '10', '12', '14'],
-        joggers: ['S', 'M', 'L', 'XL']
+        joggers: ['S', 'M', 'L', 'XL'],
+        pants: ['6', '8', '10', '12', '14'],
+        jorts: ['6', '8', '10', '12', '14']
       },
       basePrices: {
         jeans: { price: 1499, original: 2099 },
         shorts: { price: 999, original: 1499 },
-        joggers: { price: 1199, original: 1699 }
+        joggers: { price: 1199, original: 1699 },
+        pants: { price: 1199, original: 1699 },
+        jorts: { price: 999, original: 1499 }
       },
       products: {
         jeans: [
@@ -707,6 +791,22 @@ export const PRODUCTS_CONFIG: Record<string, Record<GenderType, CategoryData>> =
           { name: 'Girls Pastel Jogger - Sunburst', image: 'pants4.png', colorName: 'Sunburst', bgColor: '#FFE44D', textColor: '#1d1a18' },
           { name: 'Girls Pastel Jogger - Cherry', image: 'pants5.png', colorName: 'Cherry', bgColor: '#D44545', textColor: '#FFFFFF' },
           { name: 'Girls Pastel Jogger - Clover', image: 'pants6.png', colorName: 'Clover', bgColor: '#2A8C5E', textColor: '#FFFFFF' }
+        ],
+        pants: [
+          { name: 'Pleated Trousers - Blush', image: 'pants1.png', colorName: 'Blush', bgColor: '#F0D9D9', textColor: '#1d1a18' },
+          { name: 'Pleated Trousers - Charcoal', image: 'pants2.png', colorName: 'Charcoal', bgColor: '#4A4A4A', textColor: '#FFFFFF' },
+          { name: 'Pleated Trousers - Lavender', image: 'pants3.png', colorName: 'Lavender', bgColor: '#D8D0F0', textColor: '#1d1a18' },
+          { name: 'Pleated Trousers - Butter', image: 'pants4.png', colorName: 'Butter', bgColor: '#FFE44D', textColor: '#1d1a18' },
+          { name: 'Pleated Trousers - Sage', image: 'pants6.png', colorName: 'Sage', bgColor: '#2A8C5E', textColor: '#FFFFFF' },
+          { name: 'Pleated Trousers - Black', image: 'pants3.png', colorName: 'Black', bgColor: '#1A1716', textColor: '#FFFFFF' }
+        ],
+        jorts: [
+          { name: 'Girls Denim Jorts - Light Wash', image: 'pants1.png', colorName: 'Light Wash', bgColor: '#CDD6DD', textColor: '#1d1a18' },
+          { name: 'Girls Denim Jorts - Faded Blue', image: 'pants2.png', colorName: 'Faded Blue', bgColor: '#A9BBD0', textColor: '#1d1a18' },
+          { name: 'Girls Denim Jorts - Stone Wash', image: 'pants3.png', colorName: 'Stone Wash', bgColor: '#D8D8D8', textColor: '#1d1a18' },
+          { name: 'Girls Denim Jorts - Butter', image: 'pants4.png', colorName: 'Butter', bgColor: '#FFE44D', textColor: '#1d1a18' },
+          { name: 'Girls Denim Jorts - Indigo', image: 'pants5.png', colorName: 'Indigo', bgColor: '#223A67', textColor: '#FFFFFF' },
+          { name: 'Girls Denim Jorts - Dark Wash', image: 'pants6.png', colorName: 'Dark Wash', bgColor: '#27314F', textColor: '#FFFFFF' }
         ]
       }
     }

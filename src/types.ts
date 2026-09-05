@@ -13,6 +13,8 @@ export type PageType =
   | 'getstarted'
   | 'signin'
   | 'signup'
+  | 'me'
+  | 'edit-profile'
   | 'contact'
   | 'faq'
   | 'shipping'
@@ -79,6 +81,7 @@ export interface CustomerDetails {
   email: string;
   phone: string;
   address: string;
+  avatar?: string;
 }
 
 // c-hub-store/src/types.ts

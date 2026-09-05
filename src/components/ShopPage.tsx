@@ -37,7 +37,7 @@ const categoryCards: CategoryItem[] = [
   },
   {
     id: 'pants',
-    title: 'Pants',
+    title: 'Bottom',
     desc: 'Denim jeans, joggers & trousers',
     bgColor: 'bg-[#3f3128]',
     icon: (

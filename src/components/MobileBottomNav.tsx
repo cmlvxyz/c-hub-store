@@ -13,7 +13,7 @@ export const MobileBottomNav: React.FC = () => {
     { id: 'shop', label: 'Shop', icon: <ShoppingBag className="w-5 h-5" /> },
     { id: 'cart', label: 'Cart', icon: <ShoppingCart className="w-5 h-5" />, badge: totalCartCount },
     { id: 'orders', label: 'Orders', icon: <Package className="w-5 h-5" /> },
-    { id: 'login', label: 'Me', icon: <User className="w-5 h-5" /> },
+    { id: 'me', label: 'Me', icon: <User className="w-5 h-5" /> },
   ];
 
   const isActive = (id: PageType) => {
