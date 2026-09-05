@@ -130,6 +130,14 @@ const StatusProgress: React.FC<{ currentStatus: OrderStatus | string; onStepClic
   const steps: ProgressStep[] = ['All', 'To Pay', 'To Ship', 'To Receive', 'To Review'];
   const config = getStatusConfig(currentStatus);
   const currentStep = config?.step || 0;
+
+  const stepAccents: Record<'All' | 'To Pay' | 'To Ship' | 'To Receive' | 'To Review', { circle: string; ring: string; text: string; line: string }> = {
+    All: { circle: 'bg-indigo-500', ring: 'ring-indigo-300', text: 'text-indigo-600 dark:text-indigo-400', line: 'bg-indigo-500' },
+    'To Pay': { circle: 'bg-red-500', ring: 'ring-red-300', text: 'text-red-600 dark:text-red-400', line: 'bg-red-500' },
+    'To Ship': { circle: 'bg-amber-500', ring: 'ring-amber-300', text: 'text-amber-600 dark:text-amber-400', line: 'bg-amber-500' },
+    'To Receive': { circle: 'bg-blue-500', ring: 'ring-blue-300', text: 'text-blue-600 dark:text-blue-400', line: 'bg-blue-500' },
+    'To Review': { circle: 'bg-yellow-500', ring: 'ring-yellow-300', text: 'text-yellow-600 dark:text-yellow-400', line: 'bg-yellow-500' },
+  };
   
   if (currentStatus === 'Cancelled' || currentStatus === 'cancelled') {
     return (
@@ -149,7 +157,8 @@ const StatusProgress: React.FC<{ currentStatus: OrderStatus | string; onStepClic
           const isActive = stepNum <= currentStep;
           const isCurrent = stepNum === currentStep;
           const stepConfig = getStatusConfig(step);
-          
+          const accent = stepAccents[step];
+
           return (
             <div key={step} className="flex-1 flex items-center">
               <button
@@ -161,8 +170,8 @@ const StatusProgress: React.FC<{ currentStatus: OrderStatus | string; onStepClic
                   className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-300 ${
                     isActive 
                       ? isCurrent
-                        ? 'bg-indigo-500 text-white ring-2 ring-indigo-300 ring-offset-1 scale-110'
-                        : 'bg-indigo-500 text-white'
+                        ? `${accent.circle} text-white ring-2 ${accent.ring} ring-offset-1 scale-110`
+                        : `${accent.circle} text-white`
                       : 'bg-stone-200 dark:bg-stone-700 text-stone-400 dark:text-stone-500'
                   }`}
                 >
@@ -173,14 +182,14 @@ const StatusProgress: React.FC<{ currentStatus: OrderStatus | string; onStepClic
                   )}
                 </div>
                 <span className={`text-[9px] mt-1 font-semibold text-center whitespace-nowrap ${
-                  isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-stone-500 dark:text-stone-400'
+                  isActive ? accent.text : 'text-stone-500 dark:text-stone-400'
                 }`}>
                   {step === 'All' ? 'All' : step}
                 </span>
               </button>
               {idx < steps.length - 1 && (
-                <div className={`flex-1 h-0.5 mx-0.5 ${
-                  isActive ? 'bg-indigo-500' : 'bg-stone-200 dark:bg-stone-700'
+                <div className={`flex-1 h-0.5 mx-0.5 rounded-full ${
+                  isCurrent ? stepAccents[steps[idx + 1]].line : 'bg-stone-200 dark:bg-stone-700'
                 }`} />
               )}
             </div>

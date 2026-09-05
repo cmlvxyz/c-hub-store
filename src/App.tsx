@@ -104,7 +104,7 @@ const MainLayout: React.FC = () => {
 
   return (
     <div
-      className="min-h-screen flex flex-col justify-between overflow-x-hidden relative pt-20 md:pt-0"
+      className="relative flex flex-col justify-between overflow-hidden md:overflow-visible h-dvh md:h-auto md:min-h-screen pt-20 md:pt-0"
       style={{
         ...(containerBgStyle || { backgroundColor: '#ffffff' }),
         transition: 'background-color 0.65s cubic-bezier(0.4, 0, 0.2, 1), color 0.5s ease'
@@ -189,7 +189,7 @@ const MainLayout: React.FC = () => {
             mass: 0.85,
             duration: 0.9
           }}
-          className="relative z-10 flex flex-col flex-1 w-full justify-between"
+          className="relative z-10 flex flex-col flex-1 w-full min-h-0 justify-between overflow-y-auto overflow-x-hidden md:overflow-visible overscroll-contain"
         >
           <div className="flex flex-col flex-1 pb-16 md:pb-0">
             <main className="flex-1 w-full">
