@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { PageType, GenderType, CartItem, Order, User, CustomerDetails } from '../types';
 import { PRODUCTS_CONFIG } from '../data/products';
 import { API_BASE_URL, API_SERVER_URL } from '../service/api';
@@ -327,6 +327,56 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [user]);
 
+  // ── Cross-tab sync: iPhone simulator + MacBook tabs stay in lockstep ──
+  // page/gender/subCategory are broadcast to localStorage; every other tab of the
+  // same browser/origin listens for `storage` events and adopts the new state.
+  const CROSS_TAB_KEY = 'chub_cross_tab_session';
+  const crossTabReadyRef = useRef(false);
+  const crossTabApplyRef = useRef(false);
+
+  useEffect(() => {
+    if (crossTabApplyRef.current) {
+      crossTabApplyRef.current = false;
+      return;
+    }
+    // Skip the very first run so opening a tab doesn't override a live tab.
+    if (!crossTabReadyRef.current) {
+      crossTabReadyRef.current = true;
+      return;
+    }
+    try {
+      localStorage.setItem(CROSS_TAB_KEY, JSON.stringify({ page, gender, subCategory }));
+    } catch (e) {
+      console.error('Failed to broadcast cross-tab state:', e);
+    }
+  }, [page, gender, subCategory]);
+
+  useEffect(() => {
+    const handler = (e: StorageEvent) => {
+      if (e.key !== CROSS_TAB_KEY || !e.newValue) return;
+      try {
+        const data = JSON.parse(e.newValue);
+        if (!data || typeof data.page !== 'string') return;
+        const targetGender = data.gender && PRODUCTS_CONFIG[data.page]?.[data.gender]
+          ? data.gender
+          : gender;
+        const cfg = PRODUCTS_CONFIG[data.page]?.[targetGender];
+        const sub = cfg?.subCategories.includes(data.subCategory)
+          ? data.subCategory
+          : cfg?.defaultSubCategory;
+        crossTabApplyRef.current = true;
+        setPageState(data.page);
+        if (data.gender && data.gender !== gender) setGenderState(data.gender);
+        if (sub && sub !== subCategory) setSubCategoryState(sub);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (e) {
+        console.error('Failed to apply cross-tab state:', e);
+      }
+    };
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
+  }, [gender, subCategory]);
+
   useEffect(() => {
     let es: EventSource | null = null;
     const serverUrl = API_SERVER_URL;
@@ -504,13 +554,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const setPage = (newPage: PageType, newSubCategory?: string, newGender?: GenderType) => {
     if (newGender) setGenderState(newGender);
-    setPageState(newPage);
     setCurrentProductIndex(0);
 
-    const categoryPages: string[] = ['clothes', 'shoes', 'pants', 'underwear', 'accessories'];
-    if (categoryPages.includes(newPage)) {
-      setLastCategoryPage(newPage as PageType);
-    }
+    setPageState(newPage);
 
     if (newSubCategory) {
       setSubCategoryState(newSubCategory);
@@ -528,10 +574,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setGenderState(newGender);
     setCurrentProductIndex(0);
     const catConfig = PRODUCTS_CONFIG[page]?.[newGender];
-    if (catConfig) {
-      if (!catConfig.subCategories.includes(subCategory)) {
-        setSubCategoryState(catConfig.defaultSubCategory);
-      }
+    if (catConfig?.defaultSubCategory) {
+      setSubCategoryState(catConfig.defaultSubCategory);
     }
   };
 

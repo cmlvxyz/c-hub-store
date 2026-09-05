@@ -27,7 +27,7 @@ export const MobileBottomNav: React.FC = () => {
   return (
     <nav
       id="mobileBottomNav"
-      className="md:hidden fixed bottom-3 left-1/2 -translate-x-1/2 z-40 flex items-stretch justify-around gap-1 w-[calc(100%-2rem)] max-w-xs rounded-full bg-white/50 dark:bg-stone-900/95 backdrop-blur-xl shadow-md px-2 py-1.5"
+      className="md:hidden fixed bottom-3 left-1/2 -translate-x-1/2 z-40 flex items-stretch justify-around gap-1 w-[calc(100%-2rem)] max-w-xs rounded-full bg-white/50 dark:bg-stone-900/95 backdrop-blur-xl shadow-md px-2 py-0.2"
     >
       <div className="flex items-stretch justify-around flex-1 pb-[env(safe-area-inset-bottom)]">
         {tabs.map((tab) => {

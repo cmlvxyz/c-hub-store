@@ -5,6 +5,9 @@ import { Header } from './components/Header';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { Footer } from './components/Footer';
 import { SplashScreen } from './components/SplashScreen';
+import { GetStarted } from './components/GetStarted';
+import { SignIn } from './components/SignIn';
+import { SignUp } from './components/SignUp';
 import { ProductShowcase } from './components/ProductShowcase';
 import { HomePage } from './components/HomePage';
 import { ShopPage } from './components/ShopPage';
@@ -28,26 +31,29 @@ const MainLayout: React.FC = () => {
     }
   }, [splashShown]);
 
-  // Pagkatapos ng splash: kung hindi pa naka-login, i-land sa Login page (minsan lang).
-  // Kung naka-login na, deretso sa Home.
+  // Pagkatapos ng splash: guest -> Get Started (minsan lang), logged-in -> Home.
   useEffect(() => {
     if (splashShown && !routedAfterSplash.current) {
       routedAfterSplash.current = true;
       if (!user.isLoggedIn) {
-        setPage('login');
+        setPage('getstarted');
       }
     }
   }, [splashShown, user.isLoggedIn, setPage]);
 
-  const isProductShowcase = ['clothes', 'shoes', 'pants', 'underwear', 'accessories'].includes(page);
+  const isCategoryPage = ['clothes', 'shoes', 'pants', 'underwear', 'accessories'].includes(page);
+  const isShopPage = page === 'shop' || isCategoryPage;
 
-  const containerBgStyle = isProductShowcase
+  // Guest na humahawak sa cart/checkout/orders -> ilabas ang Login overlay.
+  const showAuthBlock = !user.isLoggedIn && ['cart', 'checkout', 'orders'].includes(page);
+
+  const containerBgStyle = isCategoryPage
     ? { backgroundColor: activeBgColor }
     : undefined;
 
   const renderActivePage = () => {
-    if (!user.isLoggedIn && ['cart', 'checkout', 'orders'].includes(page)) {
-      return <LoginPage />;
+    if (showAuthBlock) {
+      return null;
     }
 
     switch (page) {
@@ -68,7 +74,13 @@ const MainLayout: React.FC = () => {
       case 'orders':
         return <OrdersPage />;
       case 'login':
-        return <LoginPage />;
+        return null;
+      case 'signin':
+        return null;
+      case 'signup':
+        return null;
+      case 'getstarted':
+        return user.isLoggedIn ? <HomePage /> : null;
       case 'faq':
         return <FAQPage />;
       case 'shipping':
@@ -93,7 +105,7 @@ const MainLayout: React.FC = () => {
       }}
     >
       {/* Sliding c-hub.png background layer (slides down from top after splash, matching header+homepage) */}
-      {!isProductShowcase && (
+      {!isCategoryPage && (
         <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
           <motion.div
             className="absolute inset-0"
@@ -115,8 +127,8 @@ const MainLayout: React.FC = () => {
         </div>
       )}
 
-      {/* Mobile-only: buong screen ang kulay ng napiling product sa Shop (desktop untouched) */}
-      {page === 'shop' && (
+      {/* Mobile-only: buong screen ang kulay ng napiling product sa Category (desktop + shop untouched) */}
+      {isCategoryPage && (
         <div
           className="fixed inset-0 z-0 pointer-events-none md:hidden"
           style={{ backgroundColor: shopBgColor, transition: 'background-color 420ms cubic-bezier(0.22, 1, 0.36, 1)' }}
@@ -125,6 +137,15 @@ const MainLayout: React.FC = () => {
 
       {/* Enhanced Animated White Splash Screen */}
       <SplashScreen />
+
+      {/* Mobile onboarding overlays (fixed, cover header/nav) — "then" sequence:
+          magsasara muna ang lalabas (slide down), bago pumasok ang bago (slide up) */}
+      <AnimatePresence mode="wait">
+        {splashShown && page === 'getstarted' && <GetStarted key="getstarted" />}
+        {splashShown && page === 'signin' && <SignIn key="signin" />}
+        {splashShown && page === 'signup' && <SignUp key="signup" />}
+        {splashShown && (page === 'login' || showAuthBlock) && <LoginPage key="login" />}
+      </AnimatePresence>
 
       {/* Global Interactive Notification Toast */}
       {toast && (
@@ -147,7 +168,7 @@ const MainLayout: React.FC = () => {
       {/* Mobile-fixed / desktop-in-flow header — rendered OUTSIDE the animated
           wrapper so `position: fixed` targets the viewport (no transformed/filtered
           ancestor). On desktop (md+) it stays in normal flow, unchanged. */}
-      {splashShown && <Header />}
+      {splashShown && page !== 'getstarted' && page !== 'signin' && page !== 'signup' && page !== 'login' && <Header />}
 
       {/* Main Content with Drop-Down Entrance from the Top after Splash Screen finishes */}
       {splashShown ? (
@@ -180,7 +201,7 @@ const MainLayout: React.FC = () => {
             </main>
           </div>
 
-          {isProductShowcase && <Footer />}
+          {isShopPage && <Footer />}
         </motion.div>
       ) : (
         <div className="opacity-0 pointer-events-none h-screen" />
@@ -188,7 +209,7 @@ const MainLayout: React.FC = () => {
 
       {/* Mobile-only bottle nav — rendered OUTSIDE the animated wrapper so its
           `position: fixed` targets the viewport (no transformed/filtered ancestor) */}
-      {splashShown && <MobileBottomNav />}
+      {splashShown && page !== 'getstarted' && page !== 'signin' && page !== 'signup' && page !== 'login' && <MobileBottomNav />}
     </div>
   );
 };

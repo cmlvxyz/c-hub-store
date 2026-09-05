@@ -324,7 +324,7 @@ export const PRODUCTS_CONFIG: Record<string, Record<GenderType, CategoryData>> =
         sandals: { price: 1599, original: 2299 }
       },
       products: {
-        shoes: [
+        sneakers: [
           { name: 'Urban Sneakers - Chalk White', image: 'shoes1.png', colorName: 'Chalk White', bgColor: '#F5F5F5', textColor: '#1d1a18' },
           { name: 'Urban Sneakers - Stealth Charcoal', image: 'shoes2.png', colorName: 'Stealth Charcoal', bgColor: '#4A4A4A', textColor: '#FFFFFF' },
           { name: 'Urban Sneakers - Deep Navy', image: 'shoes3.png', colorName: 'Deep Navy', bgColor: '#2A3459', textColor: '#FFFFFF' },
@@ -332,7 +332,7 @@ export const PRODUCTS_CONFIG: Record<string, Record<GenderType, CategoryData>> =
           { name: 'Urban Sneakers - Crimson Red', image: 'shoes5.png', colorName: 'Crimson Red', bgColor: '#D44545', textColor: '#FFFFFF' },
           { name: 'Urban Sneakers - Emerald Green', image: 'shoes6.png', colorName: 'Emerald Green', bgColor: '#2A8C5E', textColor: '#FFFFFF' }
         ],
-        sleepers: [
+        boots: [
           { name: 'Leather Boots - Desert Tan', image: 'shoes1.png', colorName: 'Desert Tan', bgColor: '#CEB699', textColor: '#FFFFFF' },
           { name: 'Leather Boots - Vintage Plum', image: 'shoes2.png', colorName: 'Vintage Plum', bgColor: '#806875', textColor: '#FFFFFF' },
           { name: 'Leather Boots - Rosewood', image: 'shoes3.png', colorName: 'Rosewood', bgColor: '#E7A8CA', textColor: '#1d1a18' },
@@ -340,7 +340,7 @@ export const PRODUCTS_CONFIG: Record<string, Record<GenderType, CategoryData>> =
           { name: 'Leather Boots - Port Burgundy', image: 'shoes5.png', colorName: 'Port Burgundy', bgColor: '#572A34', textColor: '#FFFFFF' },
           { name: 'Leather Boots - Dark Espresso', image: 'shoes6.png', colorName: 'Dark Espresso', bgColor: '#433630', textColor: '#FFFFFF' }
         ],
-        blackshoes: [
+        sandals: [
           { name: 'Slide Sandals - Sandstone', image: 'shoes1.png', colorName: 'Sandstone', bgColor: '#F5F4EF', textColor: '#1d1a18' },
           { name: 'Slide Sandals - Slate Mist', image: 'shoes2.png', colorName: 'Slate Mist', bgColor: '#E6E5E1', textColor: '#1d1a18' },
           { name: 'Slide Sandals - Royal Blue', image: 'shoes3.png', colorName: 'Royal Blue', bgColor: '#28479D', textColor: '#FFFFFF' },

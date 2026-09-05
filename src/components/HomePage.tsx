@@ -6,19 +6,18 @@ import { ArrowRight, Shirt, Footprints, Tag, Glasses, CheckCircle2, Search, Shop
 import { ProductVisual } from './ProductVisual';
 
 export const HomePage: React.FC = () => {
-  const { setPage, setGender, splashShown } = useStore();
+  const { setPage, setGender, splashShown, gender } = useStore();
 
   const categories: { id: PageType; title: string; desc: string; icon: React.ReactNode; bg: string; defaultGender: GenderType }[] = [
     { id: 'clothes', title: 'Clothes', desc: 'Tees, hoodies & sweatshirts', icon: <Shirt className="w-7 h-7" />, bg: 'bg-[#1a1716]', defaultGender: 'men' },
-    { id: 'shoes', title: 'Shoes', desc: 'Everyday street footwear', icon: <Footprints className="w-7 h-7" />, bg: 'bg-[#27345b]', defaultGender: 'men' },
+    { id: 'shoes', title: 'Footwear', desc: 'Everyday street footwear', icon: <Footprints className="w-7 h-7" />, bg: 'bg-[#27345b]', defaultGender: 'men' },
     { id: 'pants', title: 'Pants', desc: 'Denim, joggers & cargo', icon: <Tag className="w-7 h-7" />, bg: 'bg-[#3f3128]', defaultGender: 'men' },
     { id: 'underwear', title: 'Underwear', desc: 'Everyday comfort basics', icon: <Shirt className="w-7 h-7" />, bg: 'bg-[#432838]', defaultGender: 'men' },
     { id: 'accessories', title: 'Accessories', desc: 'Finish your silhouette', icon: <Glasses className="w-7 h-7" />, bg: 'bg-[#264441]', defaultGender: 'men' }
   ];
 
-  // Mobile-only state: search + gender filter for the middle home content.
+  // Mobile-only state: search for the middle home content.
   const [mobileSearch, setMobileSearch] = React.useState('');
-  const [mobileGender, setMobileGender] = React.useState<GenderType>('men');
 
   interface GenderTile {
     label: string;
@@ -44,8 +43,8 @@ export const HomePage: React.FC = () => {
     { label: 'Pants', category: 'pants', menSub: 'jeans', womenSub: 'jeans', boysSub: 'jeans', girlsSub: 'jeans', visSub: 'jeans', womenLabel: 'Pants', girlsLabel: 'Pants', boysLabel: 'Pants', colorName: 'Light Stone', bgColor: '#D9D9D9' },
     { label: 'Jeans', category: 'pants', menSub: 'jeans', womenSub: 'jeans', boysSub: 'jeans', girlsSub: 'jeans', visSub: 'jeans', womenLabel: 'Jeans', girlsLabel: 'Jeans', boysLabel: 'Jeans', colorName: 'Light Stone', bgColor: '#D9D9D9' },
     { label: 'Slacks', category: 'pants', menSub: 'jeans', womenSub: 'jeans', boysSub: 'jeans', girlsSub: 'jeans', visSub: 'jeans', womenLabel: 'Slacks', girlsLabel: 'Slacks', boysLabel: 'Slacks', colorName: 'Light Stone', bgColor: '#D9D9D9' },
-    { label: 'Shoes', category: 'shoes', menSub: 'sneakers', womenSub: 'sneakers', boysSub: 'sneakers', girlsSub: 'sneakers', visSub: 'sneakers', womenLabel: 'Shoes', girlsLabel: 'Shoes', boysLabel: 'Shoes', colorName: 'Chalk White', bgColor: '#F5F5F5' },
-    { label: 'Black Shoes', category: 'shoes', menSub: 'sneakers', womenSub: 'sneakers', boysSub: 'sneakers', girlsSub: 'sneakers', visSub: 'sneakers', womenLabel: 'Black Shoes', girlsLabel: 'Black Shoes', boysLabel: 'Black Shoes', colorName: 'Stealth Charcoal', bgColor: '#4A4A4A' },
+    { label: 'Footwear', category: 'shoes', menSub: 'sneakers', womenSub: 'sneakers', boysSub: 'sneakers', girlsSub: 'sneakers', visSub: 'sneakers', womenLabel: 'Footwear', girlsLabel: 'Footwear', boysLabel: 'Footwear', colorName: 'Chalk White', bgColor: '#F5F5F5' },
+    { label: 'Black Footwear', category: 'shoes', menSub: 'sneakers', womenSub: 'sneakers', boysSub: 'sneakers', girlsSub: 'sneakers', visSub: 'sneakers', womenLabel: 'Black Footwear', girlsLabel: 'Black Footwear', boysLabel: 'Black Footwear', colorName: 'Stealth Charcoal', bgColor: '#4A4A4A' },
     { label: 'Boots', category: 'shoes', menSub: 'boots', womenSub: 'sandals', boysSub: 'boots', girlsSub: 'boots', visSub: 'boots', womenLabel: 'Boots', girlsLabel: 'Boots', boysLabel: 'Boots', colorName: 'Desert Tan', bgColor: '#CEB699' },
     { label: 'Accessories', category: 'accessories', menSub: 'bags', womenSub: 'bags', boysSub: 'bags', girlsSub: 'bags', visSub: 'bags', womenLabel: 'Accessories', girlsLabel: 'Accessories', boysLabel: 'Accessories', colorName: 'Stone', bgColor: '#F5F5F5' },
     { label: 'Bags', category: 'accessories', menSub: 'bags', womenSub: 'bags', boysSub: 'bags', girlsSub: 'bags', visSub: 'bags', womenLabel: 'Bags', girlsLabel: 'Bags', boysLabel: 'Bags', colorName: 'Stone', bgColor: '#F5F5F5' },
@@ -53,26 +52,25 @@ export const HomePage: React.FC = () => {
   ];
 
   const tileSubForGender = (t: GenderTile): string =>
-    mobileGender === 'men' ? t.menSub
-      : mobileGender === 'women' ? t.womenSub
-      : mobileGender === 'boys' ? t.boysSub
+    gender === 'men' ? t.menSub
+      : gender === 'women' ? t.womenSub
+      : gender === 'boys' ? t.boysSub
       : t.girlsSub;
 
   const tileLabelFor = (t: GenderTile): string =>
-    mobileGender === 'women' ? t.womenLabel
-      : mobileGender === 'girls' ? t.girlsLabel
-      : mobileGender === 'boys' ? t.boysLabel
+    gender === 'women' ? t.womenLabel
+      : gender === 'girls' ? t.girlsLabel
+      : gender === 'boys' ? t.boysLabel
       : t.label;
 
   const openCategoryTile = (t: GenderTile) => {
-    setGender(mobileGender);
-    setPage(t.category, tileSubForGender(t), mobileGender);
+    setPage(t.category, tileSubForGender(t), gender);
   };
 
   // For Women/Girls, order the three clothes tiles as Top -> Dress -> T-Shirt.
   // For Boys, order them as Polo -> Polo-shirt -> T-shirts.
   const clothesOrder =
-    mobileGender === 'women' || mobileGender === 'girls' || mobileGender === 'boys'
+    gender === 'women' || gender === 'girls' || gender === 'boys'
       ? [1, 2, 0, 3, 4, 5, 6, 7, 8, 9, 10, 11]
       : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 
@@ -143,13 +141,12 @@ export const HomePage: React.FC = () => {
     ]
   };
 
-  const activeGenderProducts = genderProducts[mobileGender].filter((p) =>
+  const activeGenderProducts = genderProducts[gender].filter((p) =>
     `${p.name} ${p.color}`.toLowerCase().includes(mobileSearch.toLowerCase())
   );
 
   const openProduct = (p: GenderProduct) => {
-    setGender(mobileGender);
-    setPage(p.category, p.sub, mobileGender);
+    setPage(p.category, p.sub, gender);
   };
 
   // Real PNG paths for category tiles that have actual product images, per gender.
@@ -267,9 +264,9 @@ export const HomePage: React.FC = () => {
             {genderOptions.map((g) => (
               <button
                 key={g}
-                onClick={() => setMobileGender(g)}
+                onClick={() => setGender(g)}
                 className={`py-2 rounded-full text-xs font-bold capitalize transition-all cursor-pointer ${
-                  mobileGender === g
+                  gender === g
                     ? 'bg-indigo-600 text-white shadow'
                     : 'text-stone-600'
                 }`}
@@ -285,7 +282,7 @@ export const HomePage: React.FC = () => {
                 <div key={start} className="overflow-x-auto no-scrollbar -mx-4 px-4">
                   <div className="w-[150%] shrink-0 grid grid-cols-6 gap-2 sm:gap-2.5">
                     {filteredGenderTiles.slice(start, start + 6).map((t) => {
-                      const imgSrc = tileImageFor(t.label, mobileGender);
+                      const imgSrc = tileImageFor(t.label, gender);
                       const label = tileLabelFor(t);
                       return (
                         <button
@@ -314,7 +311,7 @@ export const HomePage: React.FC = () => {
           <div className="flex items-end justify-between">
             <div>
               <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">
-                {mobileGender.charAt(0).toUpperCase() + mobileGender.slice(1)} Picks
+                {gender.charAt(0).toUpperCase() + gender.slice(1)} Picks
               </span>
               <h2 className="text-xl font-black font-serif text-stone-900 mt-0.5">Popular Products</h2>
             </div>

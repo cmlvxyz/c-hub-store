@@ -6,7 +6,7 @@ const processEnv: Record<string, any> = typeof process !== 'undefined' && proces
 export const API_BASE_URL = (
   env.VITE_API_URL ||
   processEnv.NEXT_PUBLIC_API_URL ||
-  'http://localhost:3006/api'
+  'https://c-hub-backend-1jy4.onrender.com/api'
 ).replace(/\/+$/, '');
 
 export const API_SERVER_URL = API_BASE_URL.replace(/\/api$/, '');

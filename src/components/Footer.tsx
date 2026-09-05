@@ -65,8 +65,8 @@ export const Footer: React.FC = () => {
     activeBgColor === '#4A3328' ||
     activeBgColor === '#572A34';
 
-  const footerBg = activeBgColor || '#111111';
   const isShowcase = ['clothes', 'shoes', 'pants', 'underwear', 'accessories'].includes(page);
+  const footerBg = isShowcase ? (activeBgColor || '#111111') : '#ffffff';
 
   return (
     <footer 
@@ -75,9 +75,10 @@ export const Footer: React.FC = () => {
         backgroundColor: footerBg,
         ...(!isShowcase && {
           backgroundImage: `
-            radial-gradient(900px 500px at 50% -20%, rgba(99,102,241,0.18), transparent 65%),
-            radial-gradient(700px 460px at 92% 30%, rgba(56,189,248,0.14), transparent 60%),
-            linear-gradient(180deg, ${footerBg} 0%, #0c0c10 100%)
+            radial-gradient(900px 520px at 50% -6%, rgba(99,102,241,0.14), transparent 62%),
+            radial-gradient(760px 480px at 88% 22%, rgba(56,189,248,0.12), transparent 60%),
+            radial-gradient(820px 560px at 8% 78%, rgba(129,140,248,0.10), transparent 60%),
+            linear-gradient(180deg, #ffffff 0%, #f4f5fb 100%)
           `,
           backgroundSize: '100% 100%',
           backgroundPosition: 'center',

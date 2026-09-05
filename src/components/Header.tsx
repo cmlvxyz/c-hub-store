@@ -249,10 +249,10 @@ export const Header: React.FC = () => {
       <button
         id="navUserMenuBtn"
         onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-        className={`flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-bold tracking-tight transition-colors cursor-pointer border ${
+        className={`flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-bold tracking-tight transition-colors cursor-pointer ${
           isDarkTheme
-            ? 'border-indigo-500 text-white'
-            : 'border-indigo-500 text-stone-800'
+            ? 'bg-white/10 text-white'
+            : 'bg-stone-100 text-stone-800 hover:bg-stone-200'
         }`}
       >
         <span>{user.username || 'User'}</span>

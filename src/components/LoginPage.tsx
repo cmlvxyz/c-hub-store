@@ -1,372 +1,223 @@
 import React, { useState } from 'react';
-import { motion, LayoutGroup } from 'motion/react';
+import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
-import {
-  User,
-  Lock,
-  Mail,
-  MapPin,
-  Phone,
-  ArrowRight,
-  AlertCircle,
-  CheckCircle2,
-  LogIn,
-  ArrowLeft,
-  Eye,
-  EyeOff,
-  Box
-} from 'lucide-react';
+import { User, Lock, Eye, EyeOff, AlertCircle, ArrowRight, Box, Sparkles, Truck, ShieldCheck, RotateCcw } from 'lucide-react';
 
+/*
+ * Mobile Login page (opens after "sign in" submit sa SignIn, o sa "Me" nav).
+ *
+ * Kaparehas ng structure ng SignIn.tsx / SignUp.tsx:
+ *   - c-hub5.png buong-screen na LIKOD (dumudulas PABABA).
+ *   - White form card na may SAD CURVE sa TOP edge (arch ⌢), dumudulas PAITAAS.
+ *   - Branding sa itaas: logo/C-HUB, "Continue Shopping".
+ *   - Form: Username (6 letters), Password, "Forgot password?".
+ *   - Sa baba: description/features para hindi plain.
+ */
 export const LoginPage: React.FC = () => {
-  const { completeAuth, setPage, user } = useStore();
+  const { setPage, showToast, login } = useStore();
 
-  // step 1 = Sign In (delivery info), step 2 = Login (username + password)
-  const [step, setStep] = useState<1 | 2>(1);
-  const [error, setError] = useState('');
-
-  // Step 1: Delivery Information (Account/Sign Up)
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [mobile, setMobile] = useState('');
-  const [address, setAddress] = useState('');
-
-  // Step 2: Login (username + password)
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
+  const [error, setError] = useState('');
 
   const inputBase =
-    'w-full px-4 py-3 rounded-2xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-stone-900 dark:text-white transition-shadow';
-  const labelBase =
-    'text-xs font-bold uppercase tracking-wider text-stone-600 dark:text-stone-400 flex items-center gap-1.5';
+    'w-full px-4 py-3.5 rounded-2xl bg-white/30 backdrop-blur-md border border-white/60 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-stone-900 transition-shadow placeholder-stone-400 shadow-sm';
 
-  // ---------- Step 1: Sign In / Delivery Info ----------
-  const handleSignInInfo = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    if (fullName.trim().split(/\s+/).filter(Boolean).length < 2) {
-      setError('Please enter your full name.');
-      return;
-    }
-    if (!email.trim() || !email.includes('@')) {
-      setError('Please enter a valid email address (e.g. name@gmail.com).');
-      return;
-    }
-    if (!mobile.trim() || mobile.trim().replace(/\D/g, '').length < 8) {
-      setError('Please enter a valid mobile number.');
-      return;
-    }
-    if (!address.trim()) {
-      setError('Please enter your complete delivery address.');
-      return;
-    }
-
-    setStep(2);
-  };
-
-  // ---------- Step 2: Login (Username + Password) ----------
-  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let val = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
-    if (val.length > 6) val = val.slice(0, 6); // Max 6 characters
-    if (val.length > 0) {
-      val = val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
-    }
-    setUsername(val);
-    if (error) setError('');
+  const handleForgot = () => {
+    showToast('Password reset link sent to your email.', 'info');
   };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!username.trim()) {
-      setError('Please create a username.');
+    if (!username.trim() || username.trim().length < 6) {
+      setError('Please enter your 6-letter username.');
       return;
     }
-    if (username.length < 2) {
-      setError('Username must be at least 2 characters.');
+    if (!password.trim()) {
+      setError('Please enter your password.');
       return;
     }
 
-    // I-save ang delivery info sa profile at mag-login gamit ang username
-    completeAuth(fullName, email, mobile, address, username);
+    login(username.trim());
     setPage('home');
   };
 
-  // ---------- Logged In State ----------
-  if (user.isLoggedIn) {
-    return (
-      <div className="w-full max-w-4xl mx-auto px-4 py-12 animate-fadeIn">
-        <div className="p-8 sm:p-10 rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xl space-y-6">
-          <div className="text-center space-y-2">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-3xl shadow-inner">
-              <CheckCircle2 className="w-10 h-10" />
-            </div>
-            <h2 className="text-3xl font-black font-serif text-stone-900 dark:text-white">
-              Welcome, {user.username}!
-            </h2>
-            <p className="text-sm text-stone-500 dark:text-stone-400">
-              You are now signed in to your C-HUB account.
-            </p>
-          </div>
-
-          <div className="space-y-3 pt-2">
-            <button
-              onClick={() => setPage('shop')}
-              className="w-full py-4 bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-sm uppercase tracking-wider rounded-2xl transition-all shadow-xl flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95"
-            >
-              <span>Start Shopping</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setPage('orders')}
-              className="w-full py-3.5 bg-stone-100 hover:bg-stone-200 text-stone-800 dark:bg-stone-800 dark:hover:bg-stone-700 dark:text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2"
-            >
-              <span>View My Orders</span>
-            </button>
-          </div>
-
-          <div className="text-center pt-2">
-            <button
-              onClick={() => setPage('shop')}
-              className="text-xs text-stone-500 hover:text-stone-900 dark:hover:text-white transition-colors"
-            >
-              Continue as Guest -&gt;
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const logoPanel = (
-    <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-700 flex flex-col items-center justify-center text-white p-10 min-h-[540px]">
-      {/* Decorative blurred blobs */}
-      <div className="absolute -top-16 -left-16 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
-      <div className="absolute -bottom-20 -right-12 w-72 h-72 rounded-full bg-white/10 blur-3xl" />
-
-      {/* Floating cube logo */}
-      <div className="relative animate-[float_4s_ease-in-out_infinite]">
-        <div className="relative w-28 h-28 sm:w-32 sm:h-32 flex items-center justify-center">
-          <div className="absolute inset-0 rounded-full border-2 border-white/25 animate-spin [animation-duration:18s]" />
-          <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/30 flex items-center justify-center shadow-2xl shadow-indigo-950/40">
-            <Box className="w-10 h-10 sm:w-12 sm:h-12 stroke-[1.8] text-white drop-shadow-lg" />
-          </div>
-        </div>
-      </div>
-
-      <h2 className="mt-8 text-4xl sm:text-5xl font-black font-serif tracking-tight">
-        C<span className="opacity-70">-</span>HUB
-      </h2>
-      <p className="mt-3 text-sm text-indigo-100 text-center max-w-xs leading-relaxed">
-        Effortless urban style. Created for modern lives.
-      </p>
-    </div>
-  );
-
-  // ---------- Two-Panel Layout (joined, logo slides right -> left on sign-in) ----------
   return (
-    <div className="w-full max-w-[920px] mx-auto px-4 py-8 animate-fadeIn">
-      <div className="rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xl overflow-hidden">
-        <LayoutGroup>
-          <div className="grid grid-cols-1 md:grid-cols-2 items-stretch">
-            {/* LEFT PANEL */}
-            <div className="relative min-h-[540px] bg-white dark:bg-stone-900">
-              {step === 1 ? (
-                <div className="p-8 sm:p-10 h-full flex flex-col">
-                  <div className="text-center mb-6">
-                    <h2 className="text-2xl font-black font-serif text-stone-900 dark:text-white">Sign In</h2>
-                    <p className="mt-1 text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
-                      Provide your delivery information to create your account.
-                    </p>
-                  </div>
+    <motion.div
+      className="fixed inset-0 z-40 flex flex-col overflow-hidden bg-white"
+      exit={{ opacity: 0, y: 120, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } }}
+    >
+      {/* ===== MOBILE LANGSAT (image likod, white form ang nasa itaas) ===== */}
+      <div className="md:hidden relative flex flex-col flex-1 min-h-0">
+        {/* c-hub5.png — buong screen, NASA LIKOD (dumudulas PATALON papunta sa exact location) */}
+        <motion.img
+          src="/c-hub5.png"
+          alt="Login"
+          className="absolute inset-0 w-full h-full object-cover object-center"
+          initial={{ y: -120 }}
+          animate={{ y: 0 }}
+          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+        />
 
-                  <form onSubmit={handleSignInInfo} className="space-y-4 flex-1">
-                    {error && (
-                      <div className="p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4 shrink-0" />
-                        <span>{error}</span>
-                      </div>
-                    )}
-
-                    <div className="space-y-1.5">
-                      <label className={labelBase}>
-                        <User className="w-3.5 h-3.5" /> Full Name
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Juan Dela Cruz"
-                        value={fullName}
-                        onChange={(e) => { setFullName(e.target.value); if (error) setError(''); }}
-                        className={inputBase}
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className={labelBase}>
-                        <Mail className="w-3.5 h-3.5" /> Email Address
-                      </label>
-                      <input
-                        type="email"
-                        required
-                        placeholder="you@gmail.com"
-                        value={email}
-                        onChange={(e) => { setEmail(e.target.value); if (error) setError(''); }}
-                        className={inputBase}
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className={labelBase}>
-                        <Phone className="w-3.5 h-3.5" /> Mobile Number
-                      </label>
-                      <input
-                        type="tel"
-                        required
-                        placeholder="0917 123 4567"
-                        value={mobile}
-                        onChange={(e) => { setMobile(e.target.value); if (error) setError(''); }}
-                        className={inputBase}
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className={labelBase}>
-                        <MapPin className="w-3.5 h-3.5" /> Complete Delivery Address
-                      </label>
-                      <textarea
-                        required
-                        rows={3}
-                        placeholder="House/Unit No., Street, Barangay, City, Province, Postal Code"
-                        value={address}
-                        onChange={(e) => { setAddress(e.target.value); if (error) setError(''); }}
-                        className={inputBase + ' resize-none'}
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full py-4 bg-indigo-500 hover:bg-indigo-600 text-white font-black text-sm uppercase tracking-wider rounded-2xl transition-all shadow-xl flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95 mt-2"
-                    >
-                      <span>Continue</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </form>
-
-                  <div className="text-center mt-4">
-                    <button
-                      onClick={() => setPage('shop')}
-                      className="text-xs text-stone-500 hover:text-stone-900 dark:hover:text-white transition-colors"
-                    >
-                      Continue as Guest -&gt;
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <motion.div layoutId="login-logo" className="h-full">
-                  {logoPanel}
-                </motion.div>
-              )}
+        {/* ===== Branding sa TAAS ng screen (absolute, over background — hindi pinababa ang form) ===== */}
+        <div className="absolute inset-x-0 top-0 z-10 flex flex-col items-center text-center px-8 pt-12 pointer-events-none">
+          <div
+            className="absolute inset-x-0 top-0 -z-10 h-56 pointer-events-none"
+            style={{
+              background: 'linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.45) 55%, rgba(255,255,255,0) 100%)',
+            }}
+          />
+          <div className="flex items-center gap-1.5">
+            <div className="w-9 h-9 flex items-center justify-center">
+              <Box className="w-full h-full stroke-[2.5] text-indigo-500" />
             </div>
+            <span className="text-2xl font-extrabold tracking-tight font-serif text-stone-900">
+              C<span className="text-indigo-600 font-sans">-</span>HUB
+            </span>
+          </div>
 
-            {/* RIGHT PANEL */}
-            <div className="relative min-h-[540px] bg-white dark:bg-stone-900">
-              {step === 1 ? (
-                <motion.div layoutId="login-logo" className="h-full">
-                  {logoPanel}
-                </motion.div>
-              ) : (
-                <div className="p-8 sm:p-10 h-full flex flex-col">
-                  <div className="text-center mb-6">
-                    <div className="w-14 h-14 mx-auto rounded-2xl bg-indigo-500 text-white flex items-center justify-center text-2xl font-bold shadow-md">
-                      <LogIn className="w-7 h-7" />
-                    </div>
-                    <h2 className="mt-3 text-2xl font-black font-serif text-stone-900 dark:text-white">Create Your Login</h2>
-                    <p className="mt-1 text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
-                      Set up your username and password to start shopping.
-                    </p>
-                  </div>
+          <h1 className="mt-3 text-lg font-black text-stone-900 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-indigo-500" />
+            Continue Shopping
+          </h1>
+        </div>
 
-                  <form onSubmit={handleLogin} className="space-y-4 flex-1">
-                    {error && (
-                      <div className="p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4 shrink-0" />
-                        <span>{error}</span>
-                      </div>
-                    )}
+        {/* ===== WHITE FORM CARD — nakaangat, TOP edge = sad curve (arch ⌢) ===== */}
+        <motion.div
+          className="relative flex flex-col flex-1 w-full px-8 pb-10 pt-28"
+          style={{
+            borderRadius: '999px 999px 0 0 / 350px 420px 0 0',
+            backgroundColor: '#ffffff',
+            borderTop: 'none',
+            marginTop: 'min(26vh, 260px)',
+            overflow: 'hidden',
+          }}
+          initial={{ y: 120 }}
+          animate={{ y: 0 }}
+          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+        >
+          {/* c-hub.png background ng white card — mula sa itaas hanggang BABA */}
+          <div
+            className="absolute inset-x-0 top-0 bottom-0 w-full pointer-events-none shadow-xl"
+            style={{
+              backgroundImage: "url('/c-hub.png')",
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              transform: 'rotate(180deg)',
+            }}
+          />
 
-                    <div className="space-y-1.5">
-                      <label className={labelBase}>
-                        <User className="w-3.5 h-3.5" /> Username
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Max 6 characters"
-                        value={username}
-                        onChange={handleUsernameChange}
-                        maxLength={6}
-                        className={inputBase}
-                      />
-                      <p className="text-[10px] text-stone-400">Max 6 characters - letters and numbers allowed.</p>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className={labelBase}>
-                        <Lock className="w-3.5 h-3.5" /> Password
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={showPw ? 'text' : 'password'}
-                          required
-                          placeholder="Enter password"
-                          value={password}
-                          onChange={(e) => {
-                            setPassword(e.target.value);
-                            if (error) setError('');
-                          }}
-                          className={inputBase + ' pr-10'}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPw(!showPw)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-indigo-600 transition-colors p-1"
-                          aria-label="Toggle password visibility"
-                        >
-                          {showPw ? (
-                            <EyeOff className="w-4 h-4" />
-                          ) : (
-                            <Eye className="w-4 h-4" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full py-4 bg-indigo-500 hover:bg-indigo-600 text-white font-black text-sm uppercase tracking-wider rounded-2xl transition-all shadow-xl flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95 mt-4"
-                    >
-                      <span>Sign In</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </form>
-
-                  <div className="text-center mt-4">
-                    <button
-                      onClick={() => setStep(1)}
-                      className="text-xs text-stone-500 hover:text-stone-900 dark:hover:text-white transition-colors flex items-center gap-1 mx-auto"
-                    >
-                      <ArrowLeft className="w-3 h-3" /> Back to delivery info
-                    </button>
-                  </div>
+          <div className="relative bottom-12 z-10">
+            {/* Login form */}
+            <form onSubmit={handleLogin} className="w-full space-y-4">
+              {error && (
+                <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{error}</span>
                 </div>
               )}
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-indigo-500 flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-indigo-500" /> Username
+                </label>
+                <input
+                  type="text"
+                  required
+                  maxLength={6}
+                  placeholder="6-letter username"
+                  value={username}
+                  onChange={(e) => { setUsername(e.target.value); if (error) setError(''); }}
+                  className={inputBase}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-indigo-500 flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-indigo-500" /> Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPw ? 'text' : 'password'}
+                    required
+                    placeholder="Enter password"
+                    value={password}
+                    onChange={(e) => { setPassword(e.target.value); if (error) setError(''); }}
+                    className={inputBase + ' pr-10'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(!showPw)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-500 hover:text-indigo-600 transition-colors p-1"
+                    aria-label="Toggle password visibility"
+                  >
+                    {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Forgot password */}
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleForgot}
+                  className="text-xs font-bold text-indigo-600 underline underline-offset-2"
+                >
+                  Forgot password?
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                className="w-[70%] mx-auto py-4 rounded-full bg-indigo-500 hover:bg-indigo-700 text-white text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-md shadow-indigo-400/30 active:scale-95 transition-all"
+              >
+                Login
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </form>
+
+            {/* ===== Description sa baba (para hindi plain) ===== */}
+            <div className="mt-8">
+              <div className="flex items-center gap-3 w-full">
+                <span className="flex-1 h-px bg-stone-200" />
+                <span className="text-xs font-bold uppercase tracking-wider text-stone-400">Shop with us</span>
+                <span className="flex-1 h-px bg-stone-200" />
+              </div>
+
+              <div className="mt-5 grid grid-cols-3 gap-2 text-center">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center">
+                    <Truck className="w-5 h-5 text-indigo-500" />
+                  </div>
+                  <p className="text-[11px] font-bold text-stone-700 leading-tight">Free &amp; Fast Delivery</p>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center">
+                    <ShieldCheck className="w-5 h-5 text-indigo-500" />
+                  </div>
+                  <p className="text-[11px] font-bold text-stone-700 leading-tight">Secure Payments</p>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center">
+                    <RotateCcw className="w-5 h-5 text-indigo-500" />
+                  </div>
+                  <p className="text-[11px] font-bold text-stone-700 leading-tight">Easy 7-Day Returns</p>
+                </div>
+              </div>
+
+              <p className="mt-5 text-center text-[11px] text-stone-400 leading-relaxed px-4">
+                Premium apparel, shoes, and accessories curated for the modern you.
+                <br />
+                By continuing, you agree to our Terms &amp; Privacy Policy.
+              </p>
             </div>
           </div>
-        </LayoutGroup>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 };
