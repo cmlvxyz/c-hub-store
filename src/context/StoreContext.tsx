@@ -1,7 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { PageType, GenderType, CartItem, Order, User, CustomerDetails } from '../types';
+import { PageType, GenderType, CartItem, Order, User, CustomerDetails, PaymentInfo } from '../types';
 import { PRODUCTS_CONFIG } from '../data/products';
-import { API_BASE_URL, API_SERVER_URL } from '../service/api';
+import { API_BASE_URL, API_SERVER_URL, registerAccount, signupAccount, fetchStoreProducts } from '../service/api';
+import { setStoredPassword } from '../service/passwords';
+import { initiatePayment, isOnlinePayment } from '../service/payments';
+
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours bago mag-expire ang session
 
 interface StoreContextType {
   page: PageType;
@@ -45,16 +49,28 @@ interface StoreContextType {
   updateCartQty: (id: string, size: string | undefined, delta: number) => void;
   removeFromCart: (id: string, size?: string) => void;
   clearCart: () => void;
-  createOrder: (customer: CustomerDetails, discountCode: string, paymentMethod: string) => Promise<Order | null>;
+  stockById: Record<string, number>;
+  getStock: (id: string) => number;
+  stockStatusOf: (id: string) => 'In Stock' | 'Low Stock' | 'Out of Stock';
+  refreshStock: () => Promise<void>;
+  createOrder: (customer: CustomerDetails, discountCode: string, paymentMethod: string, items?: CartItem[], shippingMethod?: string, shippingFee?: number, eta?: string) => Promise<Order | null>;
+  checkoutItems: CartItem[];
+  setCheckoutItems: (items: CartItem[]) => void;
   login: (username: string) => void;
   completeAuth: (fullName: string, email: string, phone: string, address: string, username: string) => void;
-  signup: (fullName: string, email: string, password: string) => Promise<boolean>;
+  signup: (fullName: string, username: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
   customerInfo: CustomerDetails | null;
   saveCustomerInfo: (info: Partial<CustomerDetails>) => void;
+  getProfile: (username: string) => CustomerDetails | null;
   showToast: (message: string, type?: 'info' | 'success' | 'warning') => void;
   closeSplash: () => void;
-  updateOrderStatus: (orderId: string, newStatus: string) => void;
+  updateOrderStatus: (orderId: string, newStatus: string) => Promise<Order | null>;
+  reflectOrderUpdate: (order: Order) => void;
+  cancelOrder: (orderId: string, reason?: string) => Promise<Order | null>;
+  requestRefundOrder: (orderId: string, reason: string) => Promise<Order | null>;
+  requestReturnOrder: (orderId: string, reason: string) => Promise<Order | null>;
+  completeOrderAfterReview: (orderId: string) => Promise<Order | null>;
   refreshOrders: () => Promise<void>;
   clearAllOrders: () => void;
   loadUserOrders: () => void;
@@ -100,10 +116,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [user, setUser] = useState<User>(() => {
     try {
       const saved = localStorage.getItem('chub_user');
-      return saved ? JSON.parse(saved) : { username: '', isLoggedIn: false };
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Haba ng session: kung walang loginAt o lampas na sa TTL, i-expire ang session
+        // (hindi basta i-leave ang logged-in state).
+        if (parsed.isLoggedIn && (!parsed.loginAt || Date.now() - parsed.loginAt > SESSION_TTL_MS)) {
+          localStorage.removeItem('chub_user');
+          return { username: '', isLoggedIn: false };
+        }
+        return parsed;
+      }
     } catch {
       return { username: '', isLoggedIn: false };
     }
+    return { username: '', isLoggedIn: false };
   });
 
   const [customerInfo, setCustomerInfo] = useState<CustomerDetails | null>(() => {
@@ -156,6 +182,40 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
 
   const [ordersUpdated, setOrdersUpdated] = useState<number>(0);
+
+  // Transient na listahan ng items na pinili sa Cart para sa partial checkout.
+  // Hindi ito nire-replace ang cart — ito lang ang "kung anong bibilhin" ngayon.
+  const [checkoutItems, setCheckoutItems] = useState<CartItem[]>([]);
+
+  // ✅ LIVE STOCK (backend ang single source of truth). Id -> available stock.
+  // Kapag walang entry ang isang id (hindi pa naka-fetch o hindi nahanap),
+  // ito ay itinuturing na walang laman (0) hanggang sa ma-load mula sa server.
+  const [stockById, setStockById] = useState<Record<string, number>>({});
+
+  // I-fetch ang buong product catalog mula sa backend para sa live stock.
+  const refreshStock = async () => {
+    try {
+      const products = await fetchStoreProducts();
+      if (Array.isArray(products)) {
+        const map: Record<string, number> = {};
+        for (const p of products) {
+          map[p.id] = Math.floor(Number(p.stock) || 0);
+        }
+        setStockById(map);
+      }
+    } catch (e) {
+      console.error('❌ Failed to load stock:', e);
+    }
+  };
+
+  const getStock = (id: string): number => (Number.isFinite(stockById[id]) ? stockById[id] : 0);
+
+  const stockStatusOf = (id: string): 'In Stock' | 'Low Stock' | 'Out of Stock' => {
+    const qty = getStock(id);
+    if (qty <= 0) return 'Out of Stock';
+    return 'In Stock';
+  };
+
 
   // ✅ ITO ANG TAMANG SETUP PARA LAGING LALABAS ANG SPLASH SA REFRESH
   const [splashShown, setSplashShown] = useState<boolean>(false);
@@ -255,6 +315,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return () => clearTimeout(timer);
     }
   }, [orders, user.isLoggedIn, user.username]);
+
+  // I-load agad ang live stock sa pag-mount ng app.
+  useEffect(() => {
+    refreshStock();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     try {
@@ -607,13 +673,24 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return;
     }
 
+    // LIVE STOCK check — huwag hayaan lumampas sa available.
+    const available = getStock(item.id);
+    if (available <= 0) {
+      showToast('This item is currently out of stock.', 'warning');
+      return;
+    }
+
     setCart(prev => {
       const existingIdx = prev.findIndex(
         cartItem => cartItem.id === item.id && cartItem.size === item.size
       );
       if (existingIdx > -1) {
+        const newQty = prev[existingIdx].qty + qty;
+        if (newQty > available) {
+          return prev;
+        }
         const copy = [...prev];
-        copy[existingIdx].qty += qty;
+        copy[existingIdx].qty = newQty;
         return copy;
       } else {
         // ✅ Siguraduhing may image ang item
@@ -625,6 +702,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const updateCartQty = (id: string, size: string | undefined, delta: number) => {
+    const available = getStock(id);
+    const current = cart.find(c => c.id === id && c.size === size);
+    const targetQty = (current?.qty || 0) + delta;
+    if (delta > 0 && targetQty > available && available > 0) {
+      showToast(`Only ${available} unit${available === 1 ? '' : 's'} available.`, 'warning');
+      return;
+    }
     setCart(prev => {
       return prev
         .map(item => {
@@ -665,22 +749,28 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const createOrder = async (
     customer: CustomerDetails,
     discountCode: string,
-    paymentMethod: string
+    paymentMethod: string,
+    items?: CartItem[],
+    shippingMethod?: string,
+    shippingFee?: number,
+    eta?: string
   ): Promise<Order | null> => {
     console.log('🛒 Creating order...');
-    
-    if (cart.length === 0) {
-      showToast('Cart is empty!', 'warning');
-      return null;
-    }
 
     if (!user.isLoggedIn) {
       showToast('Please login first', 'warning');
       return null;
     }
 
-    const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-    const shipping = subtotal > 2500 ? 0 : 150;
+    // Items na bibilhin = explicit selection (partial checkout) o ang buong cart.
+    const orderItemsRaw = items && items.length > 0 ? items : cart;
+    if (orderItemsRaw.length === 0) {
+      showToast('Cart is empty!', 'warning');
+      return null;
+    }
+
+    const subtotal = orderItemsRaw.reduce((sum, item) => sum + item.price * item.qty, 0);
+    const shipping = typeof shippingFee === 'number' ? shippingFee : (subtotal > 2500 ? 0 : 150);
 
     let discountPercent = 0;
     const cleanCode = discountCode.trim().toUpperCase();
@@ -694,13 +784,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const total = Math.max(0, subtotal - discountAmount + shipping);
 
     // ✅ Siguraduhing kasama ang image sa bawat item ng order
-    const orderItems = cart.map(item => ({
+    const orderItems = orderItemsRaw.map(item => ({
       ...item,
       image: item.image || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23e2e8f0"/%3E%3Ctext x="50" y="50" text-anchor="middle" dy=".3em" fill="%2394a3b8" font-size="12"%3EImage%3C/text%3E%3C/svg%3E'
     }));
 
-    // ✅ All new orders start at 'Order' status
-    const localStatus: Order['status'] = 'Order';
+    // ✅ All new orders start at 'Pending' (backlog initial status — source of truth)
+    const localStatus: Order['status'] = 'Pending';
 
     const newOrder: Order = {
       orderId: 'CHUB-' + Math.floor(100000 + Math.random() * 900000),
@@ -717,7 +807,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       discountCode: cleanCode,
       total,
       payment: paymentMethod,
-      status: localStatus
+      status: localStatus,
+      shippingMethod: shippingMethod || 'Standard',
+      eta: eta || '',
+      paymentInfo: { method: paymentMethod, status: 'Pending' as PaymentInfo['status'] },
     };
 
     try {
@@ -738,6 +831,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ Server error response:', errorText);
+        // Insufficient stock (409) — ipakita ang eksaktong kulang na items at huwag gumawa ng order.
+        let parsed: any = null;
+        try { parsed = JSON.parse(errorText); } catch { /* not json */ }
+        if (response.status === 409 && parsed?.insufficientStock?.length) {
+          const names = parsed.insufficientStock.map((s: any) => s.name || s.id).join(', ');
+          showToast(`Insufficient stock for: ${names}`, 'warning');
+          return null;
+        }
         throw new Error(`Server error: ${response.status} - ${errorText}`);
       }
       
@@ -745,20 +846,58 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.log('✅ Order saved:', data);
       const savedOrder = data.order || newOrder;
 
+      // ✅ Payment wiring. Ang order ay na-re-record ng backend (hindi pambayad).
+      // Para sa COD: paymentInfo = Pending hanggang delivery. Para sa online:
+      // binubuksan ang payment record sa backend; ang order ay HINDI nagiging
+      // 'Paid' dahil sa click — ang status ay nagbabago lamang kapag nag-
+      // transition ang payment record sa backend (mock gateway sa dev).
+      let finalOrder = savedOrder;
+      try {
+        if (isOnlinePayment(paymentMethod)) {
+          const initRes = await initiatePayment(
+            savedOrder.orderId,
+            paymentMethod,
+            savedOrder.total,
+            `${savedOrder.orderId}:${paymentMethod}`
+          );
+          if (initRes.success && initRes.order) {
+            finalOrder = initRes.order;
+          } else if (initRes.payment?.paymentId) {
+            finalOrder = { ...savedOrder, paymentInfo: { ...savedOrder.paymentInfo, ...initRes.payment as PaymentInfo } };
+          } else {
+            finalOrder = { ...savedOrder, paymentInfo: { method: paymentMethod, status: 'Pending' as PaymentInfo['status'] } };
+          }
+        } else {
+          finalOrder = { ...savedOrder, paymentInfo: { method: paymentMethod, status: 'Pending' as PaymentInfo['status'], provider: 'cod' } };
+        }
+      } catch (payErr) {
+        console.warn('⚠️ Payment initiation failed (order still recorded):', payErr);
+      }
+
       if (user.isLoggedIn && user.username) {
         setOrders(prev => {
-          const updated = [savedOrder, ...prev.filter(o => o.orderId !== savedOrder.orderId)];
+          const updated = [finalOrder, ...prev.filter(o => o.orderId !== savedOrder.orderId)];
           const key = getOrdersStorageKey(user.username);
           localStorage.setItem(key, JSON.stringify(updated));
           return updated;
         });
       }
 
+      // ✅ Partial checkout: alisin LANG ang mga nabiling items sa cart.
+      // Pananatilihin ang ibang cart items na hindi kasama sa order.
+      if (items && items.length > 0) {
+        const purchasedKeys = new Set(
+          orderItemsRaw.map(it => `${it.id}|${it.size || ''}|${it.color || ''}`)
+        );
+        setCart(prev => prev.filter(it => !purchasedKeys.has(`${it.id}|${it.size || ''}|${it.color || ''}`)));
+        setCheckoutItems([]);
+      }
+
       setTimeout(() => syncOrdersToServer(), 500);
 
       showToast(`Order ${savedOrder.orderId} placed successfully!`, 'success');
       addNotification(`Order ${savedOrder.orderId} placed successfully`, 'success', savedOrder.orderId);
-      return savedOrder;
+      return finalOrder;
       
     } catch (error) {
       console.error('❌ Failed to save order:', error);
@@ -814,38 +953,102 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
 const updateOrderStatus = async (orderId: string, newStatus: string) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: newStatus })
-    });
-
-    if (!response.ok) {
-      console.warn('⚠️ Failed to update order status on server:', response.status);
-      showToast('Failed to update status. Please try again.', 'warning');
-      return;
-    }
-
-    const data = await response.json() as { success: boolean; order: Order };
-    const serverStatus = (data.order?.status || newStatus) as Order['status'];
-
-    if (user.isLoggedIn && user.username) {
-      setOrders(prev => {
-        const updated = prev.map(o =>
-          o.orderId === orderId ? { ...o, ...data.order, status: serverStatus } : o
-        );
-        const key = getOrdersStorageKey(user.username);
-        localStorage.setItem(key, JSON.stringify(updated));
-        return updated;
+    // ✅ DEPRECATED PATH: Hindi na ito ginagamit para sa arbitrary status.
+    // Ang mga pagbabago ng status ay nanggagaling lang sa mga authorized action
+    // sa ibaba (cancel / refund request / return request / complete) at sa
+    // admin panel. Panatilihin ito bilang safe fallback na may validation sa
+    // backend (ang backend ang siyang nagre-reject ng invalid transitions).
+    try {
+      const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
       });
-      showToast(`Order ${orderId} is now ${serverStatus}`, 'success');
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        console.warn('⚠️ Failed to update order status on server:', response.status, errText);
+        showToast('Status change not allowed for this order.', 'warning');
+        return null;
+      }
+
+      const data = await response.json() as { success: boolean; order: Order };
+      const serverStatus = (data.order?.status || newStatus) as Order['status'];
+
+      if (user.isLoggedIn && user.username) {
+        setOrders(prev => {
+          const updated = prev.map(o =>
+            o.orderId === orderId ? { ...o, ...data.order, status: serverStatus } : o
+          );
+          const key = getOrdersStorageKey(user.username);
+          localStorage.setItem(key, JSON.stringify(updated));
+          return updated;
+        });
+        showToast(`Order ${orderId} is now ${serverStatus}`, 'success');
+      }
+      return data.order || null;
+    } catch (error) {
+      console.error('❌ Failed to update order status:', error);
+      showToast('Failed to update status. Please try again.', 'warning');
+      return null;
     }
-  } catch (error) {
-    console.error('❌ Failed to update order status:', error);
-    showToast('Failed to update status. Please try again.', 'warning');
-  }
-};
+  };
+
+  // I-reflect ang pinakabagong order (mula sa backend payment/lifecycle result)
+  // sa local orders state + localStorage. Panatilihin ang server version.
+  const reflectOrderUpdate = (updatedOrder: Order) => {
+    if (!user.isLoggedIn || !user.username || !updatedOrder?.orderId) return;
+    setOrders(prev => {
+      const exists = prev.some(o => o.orderId === updatedOrder.orderId);
+      const updated = exists
+        ? prev.map(o => (o.orderId === updatedOrder.orderId ? { ...o, ...updatedOrder } : o))
+        : [updatedOrder, ...prev];
+      const key = getOrdersStorageKey(user.username);
+      localStorage.setItem(key, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const applyOrderAction = async (
+    orderId: string,
+    path: string,
+    body: Record<string, unknown>,
+    label: string
+  ): Promise<Order | null> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        showToast(result.error || `${label} failed. Please try again.`, 'warning');
+        return null;
+      }
+      if (result.order) reflectOrderUpdate(result.order as Order);
+      showToast(`${label} successful.`, 'success');
+      return result.order as Order;
+    } catch (error) {
+      console.error(`❌ Order action (${label}) error:`, error);
+      showToast('Network error. Please try again.', 'warning');
+      return null;
+    }
+  };
+
+  // Authorized customer actions — ito lang ang status changes na pwede sa
+  // store frontend. Lahat ay naka-validate sa backend.
+  const cancelOrder = (orderId: string, reason?: string) =>
+    applyOrderAction(orderId, 'cancel', { reason: reason || '' }, 'Order cancellation');
+
+  const requestRefundOrder = (orderId: string, reason: string) =>
+    applyOrderAction(orderId, 'refund-request', { reason }, 'Refund request');
+
+  const requestReturnOrder = (orderId: string, reason: string) =>
+    applyOrderAction(orderId, 'return-request', { reason }, 'Return request');
+
+  const completeOrderAfterReview = (orderId: string) =>
+    applyOrderAction(orderId, 'complete', {}, 'Order completion');
 
   const login = (username: string) => {
     // Pwede mag-login gamit ang nickname O email address.
@@ -859,7 +1062,7 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
 
     console.log('🔑 Logging in user:', displayName);
 
-    setUser({ username: displayName, isLoggedIn: true });
+    setUser({ username: displayName, isLoggedIn: true, loginAt: Date.now() });
 
     // I-load ang saved profile (name/email) para magamit sa checkout
     try {
@@ -917,10 +1120,14 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
     showToast(`Welcome back, ${displayName}!`, 'success');
   };
 
-  const signup = async (fullName: string, email: string, password: string) => {
+  const signup = async (fullName: string, username: string, email: string, password: string) => {
     // Basic validation - ibabalik ang false kung may error
     if (!fullName.trim()) {
       showToast('Please enter your full name', 'warning');
+      return false;
+    }
+    if (!username.trim() || username.trim().length < 3) {
+      showToast('Username must be at least 3 characters', 'warning');
       return false;
     }
     if (!email.trim() || !email.includes('@')) {
@@ -932,12 +1139,27 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
       return false;
     }
 
-    // Identity name = buong pangalan (para ma-recognize ang iba't ibang users)
+    // Identity name = napiling username (ito ang magpapatuloy sa account —
+    // cart at orders ay naka-key dito para ma-restore kapag nag-reopen).
+    const usernameKey = username.trim().toLowerCase();
     const formattedName = fullName
       .trim()
       .split(/\s+/)
       .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
       .join(' ');
+
+    // I-save muna ang account sa backend (totoong account).
+    // Kapag offline ang backend, magpapatuloy bilang local account (fallback).
+    try {
+      await signupAccount(formattedName, usernameKey, email.trim(), password);
+    } catch (e: any) {
+      const msg = String(e?.message || '').toLowerCase();
+      if (msg.includes('taken') || msg.includes('exist')) {
+        showToast('This username is already taken. Please choose another.', 'warning');
+        return false;
+      }
+      console.error('Signup backend error (falling back to local):', e);
+    }
 
     const profile: CustomerDetails = {
       name: formattedName,
@@ -946,18 +1168,32 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
       address: '',
     };
 
-    // I-save ang profile per-user
+    // I-save ang profile per-user (keyed sa username).
     try {
-      localStorage.setItem(getProfileStorageKey(formattedName), JSON.stringify(profile));
+      localStorage.setItem(getProfileStorageKey(usernameKey), JSON.stringify(profile));
     } catch (e) {
       console.error('Failed to save profile:', e);
     }
 
     setCustomerInfo(profile);
-    setUser({ username: formattedName, isLoggedIn: true });
+    setUser({ username: usernameKey, isLoggedIn: true, loginAt: Date.now() });
 
     setOrders([]);
     setCart([]);
+
+    // I-save ang local password verifier (PBKDF2) — offline fallback lang.
+    try {
+      await setStoredPassword(usernameKey, password);
+    } catch (e) {
+      console.error('Failed to save password verifier:', e);
+    }
+
+    // Best-effort: i-register din sa reset-account store para sa Forgot Password.
+    try {
+      await registerAccount(usernameKey, email.trim());
+    } catch (e) {
+      console.error('Failed to register reset account (non-blocking):', e);
+    }
 
     showToast(`Account created. Welcome, ${formattedName}!`, 'success');
     return true;
@@ -998,6 +1234,17 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
       }
       return updated;
     });
+  };
+
+  // Read-only na pagbasa ng profile ng isang user (ginagamit ng login flow para i-check ang MFA status).
+  // Reuse ng EXISTING localStorage profile storage — walang ginagawang bagong auth system.
+  const getProfile = (username: string): CustomerDetails | null => {
+    try {
+      const raw = localStorage.getItem(getProfileStorageKey(username));
+      return raw ? JSON.parse(raw) as CustomerDetails : null;
+    } catch {
+      return null;
+    }
   };
 
   const logout = () => {
@@ -1049,16 +1296,28 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
         updateCartQty,
         removeFromCart,
         clearCart,
+        stockById,
+        getStock,
+        stockStatusOf,
+        refreshStock,
         createOrder,
+        checkoutItems,
+        setCheckoutItems,
         login,
         completeAuth,
         signup,
         logout,
         customerInfo,
         saveCustomerInfo,
+        getProfile,
         showToast,
         closeSplash,
         updateOrderStatus,
+        reflectOrderUpdate,
+        cancelOrder,
+        requestRefundOrder,
+        requestReturnOrder,
+        completeOrderAfterReview,
         refreshOrders,
         clearAllOrders,
         loadUserOrders,

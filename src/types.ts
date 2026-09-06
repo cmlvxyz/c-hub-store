@@ -13,8 +13,11 @@ export type PageType =
   | 'getstarted'
   | 'signin'
   | 'signup'
+  | 'forgot'
+  | 'reset'
   | 'me'
   | 'edit-profile'
+  | 'security'
   | 'contact'
   | 'faq'
   | 'shipping'
@@ -24,13 +27,18 @@ export type PageType =
 export type GenderType = 'men' | 'women' | 'boys' | 'girls';
 
 export type OrderStatus = 
-  | 'Order'
-  | 'To Pay'
+  | 'Pending'
   | 'To Ship'
-  | 'To Receive'
+  | 'Shipped'
+  | 'Out for Delivery'
+  | 'Delivered'
   | 'To Review'
   | 'Completed'
-  | 'Cancelled';
+  | 'Cancelled'
+  | 'Refund Requested'
+  | 'Refunded'
+  | 'Return Requested'
+  | 'Returned';
 
 export interface Review {
   orderId: string;
@@ -82,6 +90,36 @@ export interface CustomerDetails {
   phone: string;
   address: string;
   avatar?: string;
+  mfaEnabled?: boolean;
+}
+
+// Payment status lifecycle. Ang 'Paid' ay tanging mula sa BACKEND payment
+// record transition — hindi kailanman galing sa button click ng frontend.
+export type PaymentStatus =
+  | 'Pending'
+  | 'Processing'
+  | 'Paid'
+  | 'Failed'
+  | 'Cancelled'
+  | 'Refunded';
+
+// Structured payment info na naka-attach sa isang order. Hindi ito nagtataglay
+// ng anumang sensitive na detalye (walang card number, OTP, atbp.) — tanging
+// method, status, at reference.
+export interface PaymentInfo {
+  paymentId?: string;
+  method?: string;
+  status?: PaymentStatus;
+  provider?: string;
+  amount?: number;
+  currency?: string;
+  reference?: string;
+  paidAt?: string;
+  cancelledAt?: string;
+  refundedAt?: string;
+  failureReason?: string;
+  attempts?: number;
+  idempotencyKey?: string;
 }
 
 // c-hub-store/src/types.ts
@@ -97,10 +135,14 @@ export interface Order {
   discountCode: string;
   total: number;
   payment: string;
+  paymentInfo?: PaymentInfo;
   status: OrderStatus;
   statusHistory?: { status: OrderStatus; timestamp: string }[];
   review?: Review;
   updatedAt?: string;
+  // ✅ Shipping selections na napili sa checkout
+  shippingMethod?: string;
+  eta?: string;
   // ✅ Add fulfillment and channel for timeline
   fulfillment?: {
     carrier?: string;
@@ -120,4 +162,5 @@ export interface Order {
 export interface User {
   username: string;
   isLoggedIn: boolean;
+  loginAt?: number;
 }

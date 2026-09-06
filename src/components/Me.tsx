@@ -15,6 +15,7 @@ import {
   PencilLine,
   Phone,
   Info,
+  ShieldCheck,
 } from 'lucide-react';
 
 /*
@@ -255,6 +256,12 @@ export const Me: React.FC = () => {
                   label="Notifications"
                   subtitle="Order and promo alerts"
                   onClick={comingSoon}
+                />
+                <Row
+                  icon={<ShieldCheck className="w-5 h-5 text-indigo-500" />}
+                  label="Security"
+                  subtitle="Manage password & security"
+                  onClick={() => setPage('security')}
                 />
                 <Row
                   icon={<Settings className="w-5 h-5 text-indigo-500" />}

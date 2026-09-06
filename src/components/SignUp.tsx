@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
-import { User, Mail, Lock, Eye, EyeOff, AlertCircle, ArrowRight, Box, Sparkles, KeyRound } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, AlertCircle, ArrowRight, Box, Sparkles, KeyRound, AtSign } from 'lucide-react';
 
 // Kaparehas ng home screen background gradient (tingnan ang GetStarted.tsx)
 const HOME_GRADIENT = `
@@ -27,6 +27,7 @@ export const SignUp: React.FC = () => {
   const { setPage, showToast, signup } = useStore();
 
   const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
@@ -51,6 +52,10 @@ export const SignUp: React.FC = () => {
       setError('Please enter your full name.');
       return;
     }
+    if (!username.trim() || username.trim().length < 3) {
+      setError('Username must be at least 3 characters.');
+      return;
+    }
     if (!email.trim() || !email.includes('@')) {
       setError('Please enter a valid email address.');
       return;
@@ -64,7 +69,7 @@ export const SignUp: React.FC = () => {
       return;
     }
 
-    const ok = await signup(fullName, email, password);
+    const ok = await signup(fullName, username, email, password);
     if (ok) setPage('signin');
   };
 
@@ -164,6 +169,21 @@ export const SignUp: React.FC = () => {
                   placeholder="Juan Dela Cruz"
                   value={fullName}
                   onChange={(e) => { setFullName(e.target.value); if (error) setError(''); }}
+                  className={inputBase}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-indigo-500 flex items-center gap-1.5">
+                  <AtSign className="w-3.5 h-3.5 text-indigo-500" /> Username
+                </label>
+                <input
+                  type="text"
+                  required
+                  minLength={3}
+                  placeholder="e.g. juandelacruz"
+                  value={username}
+                  onChange={(e) => { setUsername(e.target.value.replace(/\s+/g, '')); if (error) setError(''); }}
                   className={inputBase}
                 />
               </div>
@@ -330,6 +350,21 @@ export const SignUp: React.FC = () => {
                   placeholder="Juan Dela Cruz"
                   value={fullName}
                   onChange={(e) => { setFullName(e.target.value); if (error) setError(''); }}
+                  className={desktopInputBase}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-indigo-500 flex items-center gap-1.5">
+                  <AtSign className="w-3.5 h-3.5 text-indigo-500" /> Username
+                </label>
+                <input
+                  type="text"
+                  required
+                  minLength={3}
+                  placeholder="e.g. juandelacruz"
+                  value={username}
+                  onChange={(e) => { setUsername(e.target.value.replace(/\s+/g, '')); if (error) setError(''); }}
                   className={desktopInputBase}
                 />
               </div>

@@ -132,3 +132,81 @@ export const submitStoreReview = async (reviewData: {
     console.error('❌ Review Error:', error);
   }
 };
+
+// ✅ 5. POST - Mag-sign up (name + username + email + password).
+// Totoong account na naka-save sa backend (data/users.json).
+export const signupAccount = async (name: string, username: string, email: string, password: string) => {
+  const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, username, email, password }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Could not create account');
+  }
+  return data as { success: boolean; user: { name: string; username: string; email: string } };
+};
+
+// ✅ 6. POST - Mag-login (username O email + password). Walang MFA na.
+export const loginAccount = async (identifier: string, password: string) => {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier, password }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Invalid username/email or password');
+  }
+  return data as { success: boolean; user: { name: string; username: string; email: string } };
+};
+
+// ✅ 7. POST - I-register ang username + email para sa password reset (Forgot Password).
+export const registerAccount = async (username: string, email: string) => {
+  const response = await fetch(`${API_BASE_URL}/auth/account`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, email }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Could not register account');
+  }
+  return data as { success: boolean; username: string };
+};
+
+// ✅ 8. POST - Hingi ng reset token (generic na response, anti-enumeration).
+// Sa local/dev (NODE_ENV !== 'production'), kasama sa response ang
+// 'devResetToken' para ma-test ang buong flow nang walang email service.
+export const requestPasswordReset = async (identifier: string) => {
+  const response = await fetch(`${API_BASE_URL}/auth/reset/request`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Could not request a password reset');
+  }
+  return data as {
+    success: boolean;
+    message: string;
+    devResetToken?: string;
+  };
+};
+
+// ✅ 9. POST - I-apply ang reset token (hash match, expiry, single-use).
+// Maaaring lagyan ng bagong password para ma-login muli.
+export const applyPasswordReset = async (token: string, newPassword?: string) => {
+  const response = await fetch(`${API_BASE_URL}/auth/reset/apply`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: token.trim(), newPassword }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Could not reset the password');
+  }
+  return data as { success: boolean; username: string };
+};

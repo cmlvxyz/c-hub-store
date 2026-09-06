@@ -4,7 +4,7 @@ import { Trash2, Plus, Minus, ShoppingBag, Truck, ShieldCheck, ShoppingCart, Che
 import { ProductVisual } from './ProductVisual';
 
 export const CartPage: React.FC = () => {
-  const { cart, updateCartQty, removeFromCart, clearCart, setPage, lastCategoryPage, subCategory, gender } = useStore();
+  const { cart, updateCartQty, removeFromCart, clearCart, setPage, lastCategoryPage, subCategory, gender, setCheckoutItems, getStock } = useStore();
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
@@ -44,6 +44,8 @@ export const CartPage: React.FC = () => {
   const handlePlaceOrder = () => {
     const selected = getSelectedItems();
     if (selected.length === 0) return;
+    // I-carry ang napiling items papunta sa checkout (partial checkout support).
+    setCheckoutItems(selected);
     setPage('checkout');
   };
 
@@ -198,6 +200,12 @@ export const CartPage: React.FC = () => {
                       <p className="font-bold text-sm text-stone-900 dark:text-white mt-1">
                         ₱{item.price.toLocaleString()} each
                       </p>
+                      {(() => {
+                        const st = getStock(item.id);
+                        if (st <= 0) return <span className="mt-1 inline-block px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[10px] font-black uppercase tracking-wide">Out of Stock</span>;
+                        if (st <= 10) return <span className="mt-1 inline-block px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-wide">Low Stock · {st} left</span>;
+                        return <span className="mt-1 inline-block px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-wide">In Stock · {st} left</span>;
+                      })()}
                     </div>
 
                     {/* Qty Controls */}

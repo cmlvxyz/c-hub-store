@@ -4,15 +4,16 @@ import {
   Package, ShoppingBag, ArrowRight, Truck, CheckCircle2, 
   Star, XCircle, MapPin, User,
   CreditCard, AlertCircle, Send, Edit2, Trash2, Store, 
-  RefreshCcw, Box, Banknote
+  RefreshCcw, Box, Banknote, Undo2, BadgeCheck
 } from 'lucide-react';
 import { ProductVisual } from './ProductVisual';
+import { PaymentPanel } from './PaymentPanel';
 import { OrderStatus, Order } from '../types';
 import { API_SERVER_URL } from '../service/api';
 
 const SERVER_URL = API_SERVER_URL;
 
-// Order status config
+// Order status config — buong order lifecycle
 type StatusConfig = {
   label: string;
   icon: React.ReactNode;
@@ -20,7 +21,6 @@ type StatusConfig = {
   bgColor: string;
   step: number;
   description: string;
-  nextStatus?: OrderStatus;
 };
 
 const statusConfigs: Record<OrderStatus | 'All', StatusConfig> = {
@@ -31,25 +31,14 @@ const statusConfigs: Record<OrderStatus | 'All', StatusConfig> = {
     bgColor: 'bg-indigo-100 dark:bg-indigo-950/40',
     step: 1,
     description: 'All your orders.',
-    nextStatus: 'To Pay'
   },
-  'Order': {
-    label: 'Order',
-    icon: <ShoppingBag className="w-3.5 h-3.5" />,
-    color: 'text-slate-600 dark:text-slate-300',
-    bgColor: 'bg-slate-100 dark:bg-slate-800',
-    step: 1,
-    description: 'Order placed successfully.',
-    nextStatus: 'To Pay'
-  },
-  'To Pay': {
-    label: 'To Pay',
+  'Pending': {
+    label: 'Pending',
     icon: <CreditCard className="w-3.5 h-3.5" />,
-    color: 'text-red-600 dark:text-red-400',
-    bgColor: 'bg-red-100 dark:bg-red-950/40',
+    color: 'text-rose-600 dark:text-rose-400',
+    bgColor: 'bg-rose-100 dark:bg-rose-950/40',
     step: 2,
-    description: 'Please complete your payment to proceed.',
-    nextStatus: 'To Ship'
+    description: 'Awaiting payment (online) or store dispatch.',
   },
   'To Ship': {
     label: 'To Ship',
@@ -58,32 +47,45 @@ const statusConfigs: Record<OrderStatus | 'All', StatusConfig> = {
     bgColor: 'bg-amber-100 dark:bg-amber-950/40',
     step: 3,
     description: 'Seller is preparing your order for shipment.',
-    nextStatus: 'To Receive'
   },
-  'To Receive': {
-    label: 'To Receive',
+  'Shipped': {
+    label: 'Shipped',
+    icon: <Truck className="w-3.5 h-3.5" />,
+    color: 'text-sky-600 dark:text-sky-400',
+    bgColor: 'bg-sky-100 dark:bg-sky-950/40',
+    step: 4,
+    description: 'Your package is with the courier.',
+  },
+  'Out for Delivery': {
+    label: 'Out for Delivery',
     icon: <Truck className="w-3.5 h-3.5" />,
     color: 'text-blue-600 dark:text-blue-400',
     bgColor: 'bg-blue-100 dark:bg-blue-950/40',
-    step: 4,
-    description: 'Your package is on its way. Wait for delivery.',
-    nextStatus: 'To Review'
+    step: 5,
+    description: 'Your package is on its way. Get ready for delivery.',
+  },
+  'Delivered': {
+    label: 'Delivered',
+    icon: <CheckCircle2 className="w-3.5 h-3.5" />,
+    color: 'text-teal-600 dark:text-teal-400',
+    bgColor: 'bg-teal-100 dark:bg-teal-950/40',
+    step: 6,
+    description: 'Package delivered. You may review or request a refund/return.',
   },
   'To Review': {
     label: 'To Review ⭐',
     icon: <Star className="w-3.5 h-3.5" />,
     color: 'text-yellow-600 dark:text-yellow-400',
     bgColor: 'bg-yellow-100 dark:bg-yellow-950/40',
-    step: 5,
+    step: 7,
     description: 'Share your experience with this product!',
-    nextStatus: 'Completed'
   },
   'Completed': {
     label: 'Completed ✓',
-    icon: <CheckCircle2 className="w-3.5 h-3.5" />,
+    icon: <BadgeCheck className="w-3.5 h-3.5" />,
     color: 'text-green-600 dark:text-green-400',
     bgColor: 'bg-green-100 dark:bg-green-950/40',
-    step: 6,
+    step: 8,
     description: 'Thank you for your order and review!',
   },
   'Cancelled': {
@@ -93,6 +95,38 @@ const statusConfigs: Record<OrderStatus | 'All', StatusConfig> = {
     bgColor: 'bg-red-100 dark:bg-red-950/40',
     step: 0,
     description: 'This order has been cancelled.',
+  },
+  'Refund Requested': {
+    label: 'Refund Requested',
+    icon: <RefreshCcw className="w-3.5 h-3.5" />,
+    color: 'text-orange-600 dark:text-orange-400',
+    bgColor: 'bg-orange-100 dark:bg-orange-950/40',
+    step: 0,
+    description: 'Your refund request is awaiting approval.',
+  },
+  'Refunded': {
+    label: 'Refunded',
+    icon: <Banknote className="w-3.5 h-3.5" />,
+    color: 'text-purple-600 dark:text-purple-400',
+    bgColor: 'bg-purple-100 dark:bg-purple-950/40',
+    step: 0,
+    description: 'Your payment has been returned.',
+  },
+  'Return Requested': {
+    label: 'Return Requested',
+    icon: <Undo2 className="w-3.5 h-3.5" />,
+    color: 'text-indigo-600 dark:text-indigo-400',
+    bgColor: 'bg-indigo-100 dark:bg-indigo-950/40',
+    step: 0,
+    description: 'Your return request is awaiting approval.',
+  },
+  'Returned': {
+    label: 'Returned',
+    icon: <Undo2 className="w-3.5 h-3.5" />,
+    color: 'text-slate-600 dark:text-slate-400',
+    bgColor: 'bg-slate-100 dark:bg-slate-800',
+    step: 0,
+    description: 'The items in this order have been returned.',
   }
 };
 
@@ -124,26 +158,40 @@ const isOnlinePayment = (payment?: string): boolean => {
   return p !== 'cash on delivery' && !p.includes('cod');
 };
 
-// ✅ Status Progress Bar Component
+// ✅ Status Progress Bar Component (read-only visualization ng lifecycle)
 type ProgressStep = OrderStatus | 'All';
+
+const FORWARD_CHAIN: OrderStatus[] = ['Pending', 'To Ship', 'Shipped', 'Out for Delivery', 'Delivered', 'To Review', 'Completed'];
+const TERMINAL_STATUSES: OrderStatus[] = ['Cancelled', 'Refund Requested', 'Refunded', 'Return Requested', 'Returned'];
+
 const StatusProgress: React.FC<{ currentStatus: OrderStatus | string; onStepClick?: (step: ProgressStep) => void }> = ({ currentStatus, onStepClick }) => {
-  const steps: ProgressStep[] = ['All', 'To Pay', 'To Ship', 'To Receive', 'To Review'];
+  const steps: ProgressStep[] = ['All', 'Pending', 'To Ship', 'Shipped', 'Out for Delivery', 'Delivered', 'To Review'];
   const config = getStatusConfig(currentStatus);
   const currentStep = config?.step || 0;
 
-  const stepAccents: Record<'All' | 'To Pay' | 'To Ship' | 'To Receive' | 'To Review', { circle: string; ring: string; text: string; line: string }> = {
+  const stepAccents: Record<'All' | 'Pending' | 'To Ship' | 'Shipped' | 'Out for Delivery' | 'Delivered' | 'To Review', { circle: string; ring: string; text: string; line: string }> = {
     All: { circle: 'bg-indigo-500', ring: 'ring-indigo-300', text: 'text-indigo-600 dark:text-indigo-400', line: 'bg-indigo-500' },
-    'To Pay': { circle: 'bg-red-500', ring: 'ring-red-300', text: 'text-red-600 dark:text-red-400', line: 'bg-red-500' },
+    Pending: { circle: 'bg-rose-500', ring: 'ring-rose-300', text: 'text-rose-600 dark:text-rose-400', line: 'bg-rose-500' },
     'To Ship': { circle: 'bg-amber-500', ring: 'ring-amber-300', text: 'text-amber-600 dark:text-amber-400', line: 'bg-amber-500' },
-    'To Receive': { circle: 'bg-blue-500', ring: 'ring-blue-300', text: 'text-blue-600 dark:text-blue-400', line: 'bg-blue-500' },
+    Shipped: { circle: 'bg-sky-500', ring: 'ring-sky-300', text: 'text-sky-600 dark:text-sky-400', line: 'bg-sky-500' },
+    'Out for Delivery': { circle: 'bg-blue-500', ring: 'ring-blue-300', text: 'text-blue-600 dark:text-blue-400', line: 'bg-blue-500' },
+    Delivered: { circle: 'bg-teal-500', ring: 'ring-teal-300', text: 'text-teal-600 dark:text-teal-400', line: 'bg-teal-500' },
     'To Review': { circle: 'bg-yellow-500', ring: 'ring-yellow-300', text: 'text-yellow-600 dark:text-yellow-400', line: 'bg-yellow-500' },
   };
-  
-  if (currentStatus === 'Cancelled' || currentStatus === 'cancelled') {
+
+  if (currentStatus && TERMINAL_STATUSES.includes(currentStatus as OrderStatus)) {
+    const tConfig = getStatusConfig(currentStatus as OrderStatus);
     return (
-      <div className="flex items-center gap-2 text-red-500">
-        <XCircle className="w-4 h-4" />
-        <span className="text-xs font-medium">Order Cancelled</span>
+      <div className="flex w-full overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-2 px-1">
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${tConfig.bgColor} ${tConfig.color}`}>
+            {tConfig.icon}
+          </div>
+          <div>
+            <p className={`text-xs font-bold ${tConfig.color}`}>{tConfig.label}</p>
+            <p className="text-[10px] text-stone-500 dark:text-stone-400">{tConfig.description}</p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -151,7 +199,7 @@ const StatusProgress: React.FC<{ currentStatus: OrderStatus | string; onStepClic
   return (
     <div className="w-full space-y-2">
       <div className="w-full overflow-x-auto no-scrollbar">
-        <div className="flex items-center justify-between gap-1 min-w-[480px] sm:min-w-0">
+        <div className="flex items-center justify-between gap-1 min-w-[760px] sm:min-w-0">
         {steps.map((step, idx) => {
           const stepNum = idx + 1;
           const isActive = stepNum <= currentStep;
@@ -209,7 +257,8 @@ const DeliveryModal: React.FC<{
   order: Order;
   onClose: () => void;
   onRate: (orderId: string, rating: number, comment: string) => void;
-}> = ({ order, onClose, onRate }) => {
+  onRequestRefund: (orderId: string) => void;
+}> = ({ order, onClose, onRate, onRequestRefund }) => {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -275,7 +324,7 @@ const DeliveryModal: React.FC<{
         {/* Action Buttons */}
         <div className="p-5 space-y-3">
           <div className="flex gap-3">
-            <button onClick={onClose} className="flex-1 py-2.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 font-bold text-xs uppercase tracking-wider rounded-xl transition-all text-center">
+            <button onClick={() => onRequestRefund(order.orderId)} className="flex-1 py-2.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 font-bold text-xs uppercase tracking-wider rounded-xl transition-all text-center">
               <RefreshCcw className="w-3.5 h-3.5 inline mr-1" /> Request Refund
             </button>
             <button onClick={onClose} className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all text-center">
@@ -345,42 +394,30 @@ const DeliveryModal: React.FC<{
   );
 };
 
-// ✅ Tab definitions
+// ✅ Tab definitions (uminom pa rin ng lumang pangalan ng tuwalina
+// para mapanatili ang visual na istruktura; ang mga filter ay naka-map
+// sa bagong lifecycle statuses)
 type OrderTab = 'ALL' | 'TO PAY' | 'TO SHIP' | 'TO RECEIVE' | 'TO REVIEW' | 'COMPLETED';
 
 export const OrdersPage: React.FC = () => {
-  const { orders, user, setPage, showToast, updateOrderStatus, loadUserOrders, refreshOrders, isLoading, ordersUpdated, syncOrdersToServer } = useStore();
+  const { orders, user, setPage, showToast, cancelOrder, requestRefundOrder, requestReturnOrder, completeOrderAfterReview, loadUserOrders, refreshOrders, isLoading, ordersUpdated, syncOrdersToServer } = useStore();
   const [activeTab, setActiveTab] = useState<OrderTab>('ALL');
   const [reviewingOrder, setReviewingOrder] = useState<Order | null>(null);
+  const [payingOrder, setPayingOrder] = useState<string | null>(null);
   const [localOrders, setLocalOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletedOrderIds, setDeletedOrderIds] = useState<Set<string>>(new Set());
 
-  // ✅ Handle step click in status progress bar
-  const handleStepClick = (order: Order, step: ProgressStep) => {
-    if (step === 'To Review') {
-      setReviewingOrder(order);
-      return;
-    }
-    // Auto-advance: find next status
-    const currentConfig = getStatusConfig(order.status);
-    const next = currentConfig?.nextStatus;
-    if (!next) return;
-    if (next === 'To Review') {
-      updateOrderStatus(order.orderId, next);
-      setReviewingOrder(order);
-      return;
-    }
-    updateOrderStatus(order.orderId, next);
-  };
-
-  // ✅ Handle stepper click: acts as an order filter (clickable step navigation)
+  // ✅ Handle stepper click: nagsisilbing order FILTER lang (hindi nagbabago
+  // ng status — ang status ay binabago lamang ng backend/na-authorize na actions)
   const handleFilterClick = (step: ProgressStep) => {
     switch (step) {
       case 'All': setActiveTab('ALL'); break;
-      case 'To Pay': setActiveTab('TO PAY'); break;
+      case 'Pending': setActiveTab('TO PAY'); break;
       case 'To Ship': setActiveTab('TO SHIP'); break;
-      case 'To Receive': setActiveTab('TO RECEIVE'); break;
+      case 'Shipped': setActiveTab('TO RECEIVE'); break;
+      case 'Out for Delivery': setActiveTab('TO RECEIVE'); break;
+      case 'Delivered': setActiveTab('TO RECEIVE'); break;
       case 'To Review': setActiveTab('TO REVIEW'); break;
       default: break;
     }
@@ -531,11 +568,12 @@ export const OrdersPage: React.FC = () => {
   // ✅ Filter orders based on active tab (Progress Stepper)
   const filteredOrders = (() => {
     if (activeTab === 'ALL') return allOrders;
-    if (activeTab === 'TO PAY') return allOrders.filter(o => o.status === 'To Pay');
+    if (activeTab === 'TO PAY') return allOrders.filter(o => o.status === 'Pending');
     if (activeTab === 'TO SHIP') return allOrders.filter(o => o.status === 'To Ship');
-    if (activeTab === 'TO RECEIVE') return allOrders.filter(o => o.status === 'To Receive');
+    if (activeTab === 'TO RECEIVE') return allOrders.filter(o =>
+      o.status === 'Shipped' || o.status === 'Out for Delivery' || o.status === 'Delivered'
+    );
     if (activeTab === 'TO REVIEW') {
-      // To Review status always eligible + Completed orders within 24h that aren't reviewed yet
       return allOrders.filter(o =>
         o.status === 'To Review' ||
         (o.status === 'Completed' && !o.review && isWithin24h(o.updatedAt))
@@ -545,11 +583,17 @@ export const OrdersPage: React.FC = () => {
     return allOrders;
   })();
 
-  // ✅ Progress Stepper reflects the first displayed order's status (or stays neutral when empty)
-  const navOrder = [...filteredOrders, ...allOrders].find(o => o.status !== 'Cancelled');
+  // ✅ Progress Stepper reflects the first order in an active (non-terminal) state
+  const navOrder = [...filteredOrders, ...allOrders].find(o =>
+    o.status !== 'Cancelled' &&
+    o.status !== 'Refund Requested' &&
+    o.status !== 'Refunded' &&
+    o.status !== 'Return Requested' &&
+    o.status !== 'Returned'
+  );
   const navStatus = (navOrder?.status || 'All') as OrderStatus;
 
-  // ✅ Handle review submission
+  // ✅ Handle review submission (pagkatapos ng review -> authorized 'complete')
   const handleSubmitReview = (orderId: string, rating: number, comment: string) => {
     fetch(`${SERVER_URL}/api/reviews`, {
       method: 'POST',
@@ -566,7 +610,7 @@ export const OrdersPage: React.FC = () => {
     .then(data => {
       console.log('✅ Review saved:', data);
       showToast('⭐ Thank you for your review!', 'success');
-      updateOrderStatus(orderId, 'Completed');
+      completeOrderAfterReview(orderId);
       setReviewingOrder(null);
     })
     .catch(err => {
@@ -575,10 +619,40 @@ export const OrdersPage: React.FC = () => {
     });
   };
 
-  // ✅ Handle Cancel Order
-  const handleCancelOrder = (orderId: string) => {
+  // ✅ Handle Cancel Order (autorized customer action — backend-validated)
+  const handleCancelOrder = async (orderId: string) => {
     if (!window.confirm('Are you sure you want to cancel this order?')) return;
-    updateOrderStatus(orderId, 'Cancelled');
+    await cancelOrder(orderId);
+  };
+
+  // ✅ Handle Refund Request (need bayad na ang order)
+  const handleRefundRequest = async (orderId: string) => {
+    const order = allOrders.find(o => o.orderId === orderId);
+    if (!order) return;
+    const payStatus = order.paymentInfo?.status ?? 'Pending';
+    if (payStatus !== 'Paid' && payStatus !== 'Refunded') {
+      showToast('Refunds are only available for paid orders, paid around delivery.', 'warning');
+      return;
+    }
+    if (payStatus === 'Refunded') {
+      showToast('This order has already been refunded.', 'info');
+      return;
+    }
+    const reason = window.prompt('Reason for requesting a refund:', 'Item is defective');
+    if (reason == null) return;
+    await requestRefundOrder(orderId, reason.trim() || 'No reason provided');
+  };
+
+  // ✅ Handle Return Request (kaya ring sa Delivered/To Review/Completed)
+  const handleReturnRequest = async (orderId: string) => {
+    const reason = window.prompt('Reason for requesting a return:', 'Wrong size/color ordered');
+    if (reason == null) return;
+    await requestReturnOrder(orderId, reason.trim() || 'No reason provided');
+  };
+
+  // ✅ Handle Undo (retract) Pending action — pay panel toggle
+  const togglePay = (orderId: string) => {
+    setPayingOrder(prev => (prev === orderId ? null : orderId));
   };
 
   // ✅ Handle Delete Order
@@ -702,8 +776,9 @@ export const OrdersPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Context-specific sections */}
-        {(status === 'To Pay') && (
+        {/* Context-specific sections — every status card is read-only in status;
+            ang tanging customer actions ay ang mga naka-validate na buttons ito */}
+        {(status === 'Pending') && (
           <div className="mt-4 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900 space-y-2">
             <p className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">Payment Details</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
@@ -711,20 +786,37 @@ export const OrdersPage: React.FC = () => {
               <p className="text-stone-600 dark:text-stone-300"><span className="text-stone-400">Shipping: </span>{order.shipping === 0 ? 'FREE' : `₱${order.shipping.toLocaleString()}`}</p>
             </div>
             {isOnlinePayment(order.payment) ? (
-              <div className="flex gap-3 pt-1">
-                <button
-                  onClick={() => handleStepClick(order, 'To Pay')}
-                  className="flex-1 py-2.5 bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2"
-                >
-                  <CreditCard className="w-4 h-4" /> Pay Now
-                </button>
-                <button
-                  onClick={() => handleCancelOrder(order.orderId)}
-                  className="flex-1 py-2.5 bg-white dark:bg-stone-800 border border-rose-200 dark:border-rose-800 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-bold text-xs uppercase tracking-wider rounded-xl transition-all"
-                >
-                  Cancel Order
-                </button>
-              </div>
+              <>
+                {payingOrder === order.orderId ? (
+                  <div className="pt-1 space-y-2">
+                    <PaymentPanel
+                      order={order}
+                      onPaid={() => setPayingOrder(null)}
+                    />
+                    <button
+                      onClick={() => setPayingOrder(null)}
+                      className="w-full py-2 bg-white dark:bg-stone-800 border border-rose-200 dark:border-rose-800 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-bold text-xs uppercase tracking-wider rounded-xl transition-all"
+                    >
+                      Close payment
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-3 pt-1">
+                    <button
+                      onClick={() => setPayingOrder(order.orderId)}
+                      className="flex-1 py-2.5 bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2"
+                    >
+                      <CreditCard className="w-4 h-4" /> Pay Now
+                    </button>
+                    <button
+                      onClick={() => handleCancelOrder(order.orderId)}
+                      className="flex-1 py-2.5 bg-white dark:bg-stone-800 border border-rose-200 dark:border-rose-800 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-bold text-xs uppercase tracking-wider rounded-xl transition-all"
+                    >
+                      Cancel Order
+                    </button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="flex items-center justify-between gap-3 rounded-xl bg-white dark:bg-stone-800 border border-rose-100 dark:border-rose-900 px-4 py-3">
                 <div className="flex items-start gap-2.5">
@@ -749,45 +841,61 @@ export const OrdersPage: React.FC = () => {
           <div className="mt-4 p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900 space-y-2">
             <p className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">Shipment Info</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-              <p className="text-stone-600 dark:text-stone-300"><span className="text-stone-400">Payment Status: </span><span className="text-emerald-600 font-bold">Paid</span></p>
+              <p className="text-stone-600 dark:text-stone-300"><span className="text-stone-400">Payment Status: </span>
+                {order.paymentInfo?.status === 'Paid'
+                  ? <span className="text-emerald-600 font-bold">Paid</span>
+                  : <span className="text-stone-500">{order.paymentInfo?.status || 'Pending'} • pay on delivery</span>}
+              </p>
               <p className="text-stone-600 dark:text-stone-300"><span className="text-stone-400">Order Date: </span>{order.date}</p>
               <p className="text-stone-600 dark:text-stone-300 flex items-start gap-1 sm:col-span-2"><MapPin className="w-3 h-3 mt-0.5 text-stone-400 shrink-0" /> <span><span className="text-stone-400">Shipping Address: </span>{order.customer.address}</span></p>
               <p className="text-stone-600 dark:text-stone-300"><span className="text-stone-400">Seller: </span>C-HUB Store</p>
               <p className="text-stone-600 dark:text-stone-300"><span className="text-stone-400">Status: </span>Preparing to Ship</p>
             </div>
             <button
-              disabled
-              title="Cancellation is not available once the order is being shipped"
-              className="w-full py-2.5 bg-white dark:bg-stone-800 border border-amber-200 dark:border-amber-800 text-amber-300 dark:text-amber-600 font-bold text-xs uppercase tracking-wider rounded-xl cursor-not-allowed opacity-70"
+              onClick={() => handleCancelOrder(order.orderId)}
+              className="w-full py-2.5 bg-white dark:bg-stone-800 border border-amber-200 dark:border-amber-800 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-bold text-xs uppercase tracking-wider rounded-xl transition-all"
             >
               Cancel Order
             </button>
             <p className="text-[11px] text-stone-400 dark:text-stone-500 flex items-center gap-1.5">
               <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-              Your order is being prepared for shipment. You'll get tracking details once it ships.
+              Your order can still be cancelled while it is being prepared for shipment.
             </p>
           </div>
         )}
 
-        {(status === 'To Receive') && (
+        {(status === 'Shipped' || status === 'Out for Delivery' || status === 'Delivered') && (
           <div className="mt-4 p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900 space-y-3">
             <p className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">Tracking</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
               <p className="text-stone-600 dark:text-stone-300"><span className="text-stone-400">Courier: </span>{order.fulfillment?.carrier || 'J&T Express'}</p>
               <p className="text-stone-600 dark:text-stone-300"><span className="text-stone-400">Tracking #: </span>{order.fulfillment?.trackingNumber || 'N/A'}</p>
               <p className="text-stone-600 dark:text-stone-300 sm:col-span-2"><span className="text-stone-400">Estimated Delivery: </span>{order.fulfillment?.estimatedDelivery || 'Within 2-5 days'}</p>
+              <p className="text-stone-600 dark:text-stone-300 sm:col-span-2"><span className="text-stone-400">Status: </span>
+                {status === 'Shipped' ? 'Handed over to courier' : status === 'Out for Delivery' ? 'Out for delivery' : 'Delivered — confirmed by C-HUB'}
+              </p>
             </div>
-            <div className="flex gap-2">
-              <button className="flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2">
-                <Truck className="w-4 h-4" /> Track Package
-              </button>
-              <button
-                onClick={() => handleStepClick(order, 'To Receive')}
-                className="flex-1 py-2.5 bg-white dark:bg-stone-800 border border-blue-200 dark:border-blue-800 text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/40 font-bold text-xs uppercase tracking-wider rounded-xl transition-all"
-              >
-                Order Received
-              </button>
-            </div>
+            {status === 'Delivered' && (
+              <>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    onClick={() => handleRefundRequest(order.orderId)}
+                    className="flex-1 py-2.5 bg-white dark:bg-stone-800 border border-blue-200 dark:border-blue-800 text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/40 font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2"
+                  >
+                    <RefreshCcw className="w-4 h-4" /> Request Refund
+                  </button>
+                  <button
+                    onClick={() => handleReturnRequest(order.orderId)}
+                    className="flex-1 py-2.5 bg-white dark:bg-stone-800 border border-blue-200 dark:border-blue-800 text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/40 font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2"
+                  >
+                    <Undo2 className="w-4 h-4" /> Request Return
+                  </button>
+                </div>
+                <p className="text-[11px] text-stone-400 dark:text-stone-500">
+                  Refunds &amp; returns can only be requested for paid orders after delivery.
+                </p>
+              </>
+            )}
           </div>
         )}
 
@@ -798,12 +906,26 @@ export const OrdersPage: React.FC = () => {
               <Star className="w-4 h-4 text-yellow-500 fill-yellow-400 shrink-0" />
               <p className="text-stone-600 dark:text-stone-300">You've received your order. Share your experience!</p>
             </div>
-            <button
-              onClick={() => setReviewingOrder(order)}
-              className="w-full py-2.5 bg-yellow-500 hover:bg-yellow-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2"
-            >
-              <Star className="w-4 h-4" /> Write Review
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={() => setReviewingOrder(order)}
+                className="flex-1 py-2.5 bg-yellow-500 hover:bg-yellow-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2"
+              >
+                <Star className="w-4 h-4" /> Write Review
+              </button>
+              <button
+                onClick={() => handleRefundRequest(order.orderId)}
+                className="flex-1 py-2.5 bg-white dark:bg-stone-800 border border-yellow-200 dark:border-yellow-800 text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-950/40 font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2"
+              >
+                <RefreshCcw className="w-4 h-4" /> Request Refund
+              </button>
+              <button
+                onClick={() => handleReturnRequest(order.orderId)}
+                className="flex-1 py-2.5 bg-white dark:bg-stone-800 border border-yellow-200 dark:border-yellow-800 text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2"
+              >
+                <Undo2 className="w-4 h-4" /> Request Return
+              </button>
+            </div>
           </div>
         )}
 
@@ -830,12 +952,18 @@ export const OrdersPage: React.FC = () => {
               <>
                 {inReviewWindow ? (
                   <>
-                    <div className="flex gap-3">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <button
-                        onClick={() => setReviewingOrder(order)}
-                        className="flex-1 py-2.5 bg-white dark:bg-stone-800 border border-green-200 dark:border-green-800 text-green-700 hover:bg-green-50 dark:hover:bg-green-950/40 font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2"
+                        onClick={() => handleRefundRequest(order.orderId)}
+                        className="flex-1 py-2.5 bg-white dark:bg-stone-800 border border-green-200 dark:border-green-800 text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-950/40 font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2"
                       >
                         <RefreshCcw className="w-4 h-4" /> Request Refund
+                      </button>
+                      <button
+                        onClick={() => handleReturnRequest(order.orderId)}
+                        className="flex-1 py-2.5 bg-white dark:bg-stone-800 border border-green-200 dark:border-green-800 text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2"
+                      >
+                        <Undo2 className="w-4 h-4" /> Request Return
                       </button>
                       <button
                         onClick={() => setReviewingOrder(order)}
@@ -865,6 +993,51 @@ export const OrdersPage: React.FC = () => {
             >
               <ShoppingBag className="w-4 h-4" /> Buy Again
             </button>
+          </div>
+        )}
+
+        {(status === 'Cancelled') && (
+          <div className="mt-4 p-4 rounded-2xl bg-stone-50 dark:bg-stone-800/60 border border-stone-200 dark:border-stone-800 text-xs flex items-start gap-2">
+            <XCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+            <p className="text-stone-600 dark:text-stone-300">
+              This order has been cancelled. No payment was collected.
+            </p>
+          </div>
+        )}
+
+        {(status === 'Refund Requested') && (
+          <div className="mt-4 p-4 rounded-2xl bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900 text-xs flex items-start gap-2">
+            <RefreshCcw className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+            <p className="text-stone-600 dark:text-stone-300">
+              Your refund request has been submitted and is awaiting approval by C-HUB.
+            </p>
+          </div>
+        )}
+
+        {(status === 'Refunded') && (
+          <div className="mt-4 p-4 rounded-2xl bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900 text-xs flex items-start gap-2">
+            <Banknote className="w-4 h-4 text-purple-500 shrink-0 mt-0.5" />
+            <p className="text-stone-600 dark:text-stone-300">
+              This order has been refunded. The amount will be returned via your payment method.
+            </p>
+          </div>
+        )}
+
+        {(status === 'Return Requested') && (
+          <div className="mt-4 p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900 text-xs flex items-start gap-2">
+            <Undo2 className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
+            <p className="text-stone-600 dark:text-stone-300">
+              Your return request has been submitted and is awaiting approval by C-HUB.
+            </p>
+          </div>
+        )}
+
+        {(status === 'Returned') && (
+          <div className="mt-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 text-xs flex items-start gap-2">
+            <Undo2 className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+            <p className="text-stone-600 dark:text-stone-300">
+              The items in this order have been returned.
+            </p>
           </div>
         )}
       </div>
@@ -966,6 +1139,7 @@ export const OrdersPage: React.FC = () => {
           order={reviewingOrder}
           onClose={() => setReviewingOrder(null)}
           onRate={handleSubmitReview}
+          onRequestRefund={handleRefundRequest}
         />
       )}
     </div>

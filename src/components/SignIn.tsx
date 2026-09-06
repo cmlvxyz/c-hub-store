@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
-import { Mail, Lock, Eye, EyeOff, AlertCircle, ArrowRight, Box, Sparkles } from 'lucide-react';
+import { Lock, Eye, EyeOff, AlertCircle, ArrowRight, Box, Sparkles, User, Loader2 } from 'lucide-react';
+import { loginAccount } from '../service/api';
+import {
+  resolveProfileUsername,
+  hasStoredPassword,
+  verifyStoredPassword,
+  loginLockRemaining,
+  recordFailedLogin,
+  clearLoginLock,
+} from '../service/passwords';
 
 // Kaparehas ng home screen background gradient (tingnan ang GetStarted.tsx)
 const HOME_GRADIENT = `
@@ -26,12 +35,13 @@ const HOME_GRADIENT = `
  *   0.9s, cubic-bezier(0.22, 1, 0.36, 1), eksakto sa pwesto.
  */
 export const SignIn: React.FC = () => {
-  const { setPage, showToast, user } = useStore();
+  const { setPage, showToast, login } = useStore();
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const inputBase =
     'w-full px-4 py-3.5 rounded-2xl bg-white/30 backdrop-blur-md border border-white/60 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-stone-900 transition-shadow placeholder-stone-400 shadow-sm';
@@ -43,21 +53,56 @@ export const SignIn: React.FC = () => {
     showToast('Google sign-in is not available yet.', 'info');
   };
 
-  const handleSignIn = (e: React.FormEvent) => {
+  // Ang Sign In na ito ay ANG TUNAY na login — backend account (username o email
+  // + password). Kapag offline ang backend, bumabagsak sa lokal na verifier.
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!email.trim() || !email.includes('@')) {
-      setError('Please enter a valid email address.');
+    const ident = identifier.trim();
+    if (!ident) {
+      setError('Please enter your username or email.');
       return;
     }
-    if (!password.trim()) {
+    if (!password) {
       setError('Please enter your password.');
       return;
     }
 
-    showToast('Signed in successfully', 'success');
-    setPage(user.isLoggedIn ? 'home' : 'login');
+    const lockMs = loginLockRemaining(ident);
+    if (lockMs > 0) {
+      const mins = Math.ceil(lockMs / 60000);
+      setError(`Too many failed attempts. Please try again in ${mins} minute${mins > 1 ? 's' : ''}.`);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      try {
+        const res = await loginAccount(ident, password);
+        clearLoginLock(ident);
+        login(res.user.username);
+        setPage('home');
+        return;
+      } catch (backendErr: any) {
+        const backendMsg = String(backendErr?.message || '').toLowerCase();
+        const resolved = resolveProfileUsername(ident);
+        const verified = resolved ? await verifyStoredPassword(resolved, password) : false;
+        if (resolved && hasStoredPassword(resolved) && verified) {
+          clearLoginLock(ident);
+          login(resolved);
+          setPage('home');
+          return;
+        }
+        if (!resolved || !hasStoredPassword(resolved) || !verified) {
+          recordFailedLogin(ident);
+          setError('Invalid username or password.');
+          return;
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const googleG = (
@@ -148,14 +193,15 @@ export const SignIn: React.FC = () => {
 
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-wider text-indigo-500 flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-indigo-500" /> Email
+                <User className="w-3.5 h-3.5 text-indigo-500" /> Username or Email
               </label>
               <input
-                type="email"
+                type="text"
                 required
-                placeholder="you@gmail.com"
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); if (error) setError(''); }}
+                maxLength={60}
+                placeholder="Username or email"
+                value={identifier}
+                onChange={(e) => { setIdentifier(e.target.value); if (error) setError(''); }}
                 className={inputBase}
               />
             </div>
@@ -186,9 +232,10 @@ export const SignIn: React.FC = () => {
 
             <button
               type="submit"
-              className="w-[50%] mx-auto py-4 rounded-full bg-indigo-500 hover:bg-indigo-700 text-white text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-md shadow-indigo-400/30 active:scale-95 transition-all"
+              disabled={loading}
+              className="w-[50%] mx-auto py-4 rounded-full bg-indigo-500 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-md shadow-indigo-400/30 active:scale-95 transition-all"
             >
-              Sign in
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Sign in'}
             </button>
           </form>
 
@@ -275,14 +322,15 @@ export const SignIn: React.FC = () => {
 
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-indigo-500 flex items-center gap-1.5">
-                  <Mail className="w-3.5 h-3.5 text-indigo-500" /> Email
+                  <User className="w-3.5 h-3.5 text-indigo-500" /> Username or Email
                 </label>
                 <input
-                  type="email"
+                  type="text"
                   required
-                  placeholder="you@gmail.com"
-                  value={email}
-                  onChange={(e) => { setEmail(e.target.value); if (error) setError(''); }}
+                  maxLength={60}
+                  placeholder="Username or email"
+                  value={identifier}
+                  onChange={(e) => { setIdentifier(e.target.value); if (error) setError(''); }}
                   className={desktopInputBase}
                 />
               </div>
@@ -314,7 +362,7 @@ export const SignIn: React.FC = () => {
               <div className="flex justify-end">
                 <button
                   type="button"
-                  onClick={() => showToast('Password reset link sent to your email.', 'info')}
+                  onClick={() => setPage('forgot')}
                   className="text-xs font-bold text-indigo-600 underline underline-offset-2"
                 >
                   Forgot password?
@@ -323,10 +371,10 @@ export const SignIn: React.FC = () => {
 
               <button
                 type="submit"
-                className="w-full py-4 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-base font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/25 active:scale-95 transition-all"
+                disabled={loading}
+                className="w-full py-4 rounded-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-base font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/25 active:scale-95 transition-all"
               >
-                Sign in
-                <ArrowRight className="w-4 h-4" />
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><span>Sign in</span><ArrowRight className="w-4 h-4" /></>}
               </button>
             </form>
 

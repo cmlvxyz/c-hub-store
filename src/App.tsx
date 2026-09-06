@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { StoreProvider, useStore } from './context/StoreContext';
 import { Header } from './components/Header';
 import { MobileBottomNav } from './components/MobileBottomNav';
-import { Footer } from './components/Footer';
 import { SplashScreen } from './components/SplashScreen';
 import { GetStarted } from './components/GetStarted';
 import { SignIn } from './components/SignIn';
@@ -15,8 +14,11 @@ import { CartPage } from './components/CartPage';
 import { CheckoutPage } from './components/CheckoutPage';
 import { OrdersPage } from './components/OrdersPage';
 import { LoginPage } from './components/LoginPage';
+import { ForgotPassword } from './components/ForgotPassword';
+import { ResetPassword } from './components/ResetPassword';
 import { Me } from './components/Me';
 import { EditProfile } from './components/EditProfile';
+import { SecuritySettings } from './components/SecuritySettings';
 import { FAQPage, ShippingPage, ReturnsPage, SizeGuidePage, ContactPage } from './components/SupportPages';
 
 const MainLayout: React.FC = () => {
@@ -43,7 +45,6 @@ const MainLayout: React.FC = () => {
   }, [splashShown, user.isLoggedIn, setPage]);
 
   const isCategoryPage = ['clothes', 'shoes', 'pants', 'underwear', 'accessories'].includes(page);
-  const isShopPage = page === 'shop' || isCategoryPage;
 
   // Guest na humahawak sa cart/checkout/orders -> ilabas ang Login overlay.
   const showAuthBlock = !user.isLoggedIn && ['cart', 'checkout', 'orders'].includes(page);
@@ -78,7 +79,13 @@ const MainLayout: React.FC = () => {
         return <Me />;
       case 'edit-profile':
         return <EditProfile />;
+      case 'security':
+        return <SecuritySettings />;
       case 'login':
+        return null;
+      case 'forgot':
+        return null;
+      case 'reset':
         return null;
       case 'signin':
         return null;
@@ -103,7 +110,7 @@ const MainLayout: React.FC = () => {
 
   return (
     <div
-      className="relative flex flex-col justify-between overflow-hidden md:overflow-visible h-dvh md:h-auto md:min-h-screen pt-20 md:pt-0"
+      className="relative flex flex-col justify-between h-dvh overflow-hidden md:h-auto md:min-h-screen md:overflow-x-hidden md:overflow-y-visible pt-20 md:pt-0"
       style={{
         ...(containerBgStyle || { backgroundColor: '#ffffff' }),
         transition: 'background-color 0.65s cubic-bezier(0.4, 0, 0.2, 1), color 0.5s ease'
@@ -149,13 +156,15 @@ const MainLayout: React.FC = () => {
         {splashShown && page === 'getstarted' && <GetStarted key="getstarted" />}
         {splashShown && page === 'signin' && <SignIn key="signin" />}
         {splashShown && page === 'signup' && <SignUp key="signup" />}
+        {splashShown && page === 'forgot' && <ForgotPassword key="forgot" />}
+        {splashShown && page === 'reset' && <ResetPassword key="reset" />}
         {splashShown && (page === 'login' || showAuthBlock) && <LoginPage key="login" />}
       </AnimatePresence>
 
       {/* Mobile-fixed / desktop-in-flow header — rendered OUTSIDE the animated
           wrapper so `position: fixed` targets the viewport (no transformed/filtered
           ancestor). On desktop (md+) it stays in normal flow, unchanged. */}
-      {splashShown && page !== 'getstarted' && page !== 'signin' && page !== 'signup' && page !== 'login' && <Header />}
+      {splashShown && page !== 'getstarted' && page !== 'signin' && page !== 'signup' && page !== 'forgot' && page !== 'reset' && page !== 'login' && <Header />}
 
       {/* Main Content with Drop-Down Entrance from the Top after Splash Screen finishes */}
       {splashShown ? (
@@ -187,8 +196,6 @@ const MainLayout: React.FC = () => {
               </AnimatePresence>
             </main>
           </div>
-
-          {isShopPage && <Footer />}
         </motion.div>
       ) : (
         <div className="opacity-0 pointer-events-none h-screen" />
@@ -196,7 +203,7 @@ const MainLayout: React.FC = () => {
 
       {/* Mobile-only bottle nav — rendered OUTSIDE the animated wrapper so its
           `position: fixed` targets the viewport (no transformed/filtered ancestor) */}
-      {splashShown && page !== 'getstarted' && page !== 'signin' && page !== 'signup' && page !== 'login' && <MobileBottomNav />}
+      {splashShown && page !== 'getstarted' && page !== 'signin' && page !== 'signup' && page !== 'forgot' && page !== 'reset' && page !== 'login' && <MobileBottomNav />}
     </div>
   );
 };

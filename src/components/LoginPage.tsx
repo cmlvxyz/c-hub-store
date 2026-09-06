@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
-import { User, Lock, Eye, EyeOff, AlertCircle, ArrowRight, Box, Sparkles, Truck, ShieldCheck, RotateCcw } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, AlertCircle, ArrowRight, Box, Sparkles, Truck, ShieldCheck, RotateCcw, Loader2 } from 'lucide-react';
+import { loginAccount } from '../service/api';
+import {
+  resolveProfileUsername,
+  hasStoredPassword,
+  verifyStoredPassword,
+  loginLockRemaining,
+  recordFailedLogin,
+  clearLoginLock,
+} from '../service/passwords';
 
 // Kaparehas ng home screen background gradient (tingnan ang GetStarted.tsx)
 const HOME_GRADIENT = `
@@ -22,12 +31,13 @@ const HOME_GRADIENT = `
  *   - Sa baba: description/features para hindi plain.
  */
 export const LoginPage: React.FC = () => {
-  const { setPage, showToast, login } = useStore();
+  const { setPage, login } = useStore();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const inputBase =
     'w-full px-4 py-3.5 rounded-2xl bg-white/30 backdrop-blur-md border border-white/60 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-stone-900 transition-shadow placeholder-stone-400 shadow-sm';
@@ -36,24 +46,65 @@ export const LoginPage: React.FC = () => {
     'w-full px-4 py-3.5 rounded-2xl bg-stone-50 border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-stone-900 transition-shadow placeholder-stone-400';
 
   const handleForgot = () => {
-    showToast('Password reset link sent to your email.', 'info');
+    setPage('forgot');
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!username.trim() || username.trim().length < 3) {
-      setError('Please enter your 3-6 letter username.');
+    const ident = username.trim();
+    if (ident.length < 3) {
+      setError('Please enter your username or email.');
       return;
     }
-    if (!password.trim()) {
+    if (!password) {
       setError('Please enter your password.');
       return;
     }
 
-    login(username.trim());
-    setPage('home');
+    // Rate limit: 5 failed attempts -> 5-min lockout (pareho para sa lahat ng accounts)
+    const lockMs = loginLockRemaining(ident);
+    if (lockMs > 0) {
+      const mins = Math.ceil(lockMs / 60000);
+      setError(`Too many failed attempts. Please try again in ${mins} minute${mins > 1 ? 's' : ''}.`);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Muna: subukan ang backend account (username o email + password).
+      // Totoong server-side accounts — kapag offline ang backend, babagsak sa local.
+      try {
+        const res = await loginAccount(ident, password);
+        clearLoginLock(ident);
+        login(res.user.username);
+        setPage('home');
+        return;
+      } catch (backendErr: any) {
+        const backendMsg = String(backendErr?.message || '').toLowerCase();
+
+        // I-resolve ang username o email sa lokal na profile name.
+        const resolved = resolveProfileUsername(ident);
+        const verified = resolved ? await verifyStoredPassword(resolved, password) : false;
+
+        // Kapag may backend account (409/401 para sa credentials) — huwag i-leak.
+        const isAuthError = backendMsg.includes('invalid') || backendMsg.includes('password') || backendMsg.includes('username');
+        if (resolved && hasStoredPassword(resolved) && verified) {
+          clearLoginLock(ident);
+          login(resolved);
+          setPage('home');
+          return;
+        }
+        if (!resolved || !hasStoredPassword(resolved) || !verified) {
+          recordFailedLogin(ident);
+          setError('Invalid username or password.');
+          return;
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -123,7 +174,7 @@ export const LoginPage: React.FC = () => {
           />
 
           <div className="relative bottom-12 z-10">
-            {/* Login form */}
+            {/* Login form (walang MFA) */}
             <form onSubmit={handleLogin} className="w-full space-y-4">
               {error && (
                 <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-xs flex items-center gap-2">
@@ -139,14 +190,14 @@ export const LoginPage: React.FC = () => {
                 <input
                   type="text"
                   required
-                  maxLength={6}
-                  placeholder="Enter username"
+                  maxLength={60}
+                  placeholder="Username or email"
                   value={username}
                   onChange={(e) => { setUsername(e.target.value); if (error) setError(''); }}
                   className={inputBase}
                 />
                 <p className="text-[11px] text-stone-400">
-                  {username.trim().length}/6 letters
+                  {username.trim().length} character{username.trim().length === 1 ? '' : 's'} — username or email
                 </p>
               </div>
 
@@ -187,14 +238,20 @@ export const LoginPage: React.FC = () => {
 
               <button
                 type="submit"
-                className="w-[70%] mx-auto py-4 rounded-full bg-indigo-500 hover:bg-indigo-700 text-white text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-md shadow-indigo-400/30 active:scale-95 transition-all"
+                disabled={loading}
+                className="w-[70%] mx-auto py-4 rounded-full bg-indigo-500 hover:bg-indigo-700 text-white text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-md shadow-indigo-400/30 active:scale-95 transition-all disabled:opacity-60"
               >
-                Login
-                <ArrowRight className="w-4 h-4" />
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    Login
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
-            </form>
-
-            {/* ===== Description sa baba (para hindi plain) ===== */}
+              </form>
+            
             <div className="mt-8">
               <div className="flex items-center gap-3 w-full">
                 <span className="flex-1 h-px bg-stone-200" />
@@ -265,7 +322,7 @@ export const LoginPage: React.FC = () => {
             Sign in to continue shopping.
           </p>
 
-          {/* Login form card */}
+          {/* Login form card (walang MFA) */}
           <div className="mt-10 w-full max-w-md bg-white border border-stone-100 shadow-xl shadow-stone-200/50 rounded-3xl p-8 text-left">
             <form onSubmit={handleLogin} className="w-full space-y-4">
               {error && (
@@ -282,14 +339,14 @@ export const LoginPage: React.FC = () => {
                 <input
                   type="text"
                   required
-                  maxLength={6}
-                  placeholder="3-6 letter username"
+                  maxLength={60}
+                  placeholder="Username or email"
                   value={username}
                   onChange={(e) => { setUsername(e.target.value); if (error) setError(''); }}
                   className={desktopInputBase}
                 />
                 <p className="text-[11px] text-stone-400">
-                  {username.trim().length}/6 letters
+                  {username.trim().length} character{username.trim().length === 1 ? '' : 's'} — username or email
                 </p>
               </div>
 
@@ -329,12 +386,19 @@ export const LoginPage: React.FC = () => {
 
               <button
                 type="submit"
-                className="w-full py-4 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-base font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/25 active:scale-95 transition-all"
+                disabled={loading}
+                className="w-full py-4 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-base font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/25 active:scale-95 transition-all disabled:opacity-60"
               >
-                Login
-                <ArrowRight className="w-4 h-4" />
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    Login
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
-            </form>
+              </form>
           </div>
 
           {/* Description sa baba (gaya sa mobile) */}

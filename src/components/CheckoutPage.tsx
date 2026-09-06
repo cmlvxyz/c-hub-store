@@ -1,11 +1,44 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useStore } from '../context/StoreContext';
-import { CustomerDetails, Order } from '../types';
-import { ShieldCheck, Truck, ArrowLeft, Tag, Check, CreditCard, Banknote, Smartphone, AlertCircle } from 'lucide-react';
+import { CustomerDetails, Order, CartItem } from '../types';
+import { ShieldCheck, Truck, ArrowLeft, Tag, Check, CreditCard, Banknote, Smartphone, AlertCircle, MapPin, Clock } from 'lucide-react';
 import { ProductVisual } from './ProductVisual';
+import { PRODUCTS_CONFIG } from '../data/products';
+import { PaymentPanel } from './PaymentPanel';
+
+// Shipping methods na available sa checkout. Ang Standard ay sumusunod sa
+// umiiral na rule (FREE kapag PHP 2,500+), habang ang Express ay flat rate.
+const SHIPPING_METHODS = [
+  { id: 'Standard', eta: '3–7 business days', desc: 'Doorstep delivery nationwide — FREE over ₱2,500' },
+  { id: 'Express', eta: '1–3 business days', desc: 'Priority handling at a flat ₱249 rate' }
+] as const;
+
+// Availability check laban sa katalogo. Ang item ay itinuturing na unavailable
+// kung wala na sa catalog o wala na ang napiling kulay/size doon.
+const checkCatalogAvailability = (item: CartItem): { found: boolean; sizeOk: boolean } => {
+  const gender = item.gender;
+  const sub = item.subCategory || '';
+  if (!gender || !sub) return { found: true, sizeOk: true };
+  const color = (item.color || '').toLowerCase();
+  for (const cat of Object.keys(PRODUCTS_CONFIG)) {
+    const genderCfg = PRODUCTS_CONFIG[cat]?.[gender];
+    if (!genderCfg) continue;
+    const products = genderCfg.products?.[sub];
+    const sizes = genderCfg.sizes?.[sub];
+    if (!products) continue;
+    const match = products.find(p => (p.colorName || '').toLowerCase() === color);
+    if (match) {
+      return { found: true, sizeOk: sizes ? sizes.includes(item.size || '') : true };
+    }
+  }
+  return { found: false, sizeOk: false };
+};
 
 export const CheckoutPage: React.FC = () => {
-  const { cart, createOrder, setPage, showToast, customerInfo, saveCustomerInfo } = useStore();
+  const { cart, createOrder, setPage, showToast, customerInfo, saveCustomerInfo, checkoutItems, getStock } = useStore();
+
+  // Items na bibilhin: ang napili sa Cart (partial checkout), o ang buong cart.
+  const items = checkoutItems.length > 0 ? checkoutItems : cart;
 
   const [customer, setCustomer] = useState<CustomerDetails>({
     name: customerInfo?.name || '',
@@ -14,15 +47,29 @@ export const CheckoutPage: React.FC = () => {
     address: customerInfo?.address || ''
   });
 
+  const [addressSource, setAddressSource] = useState<'saved' | 'new'>(customerInfo?.address ? 'saved' : 'new');
+
   const [discountCode, setDiscountCode] = useState('');
   const [appliedCode, setAppliedCode] = useState('');
   const [discountError, setDiscountError] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Cash on Delivery');
+  const [shippingMethod, setShippingMethod] = useState<'Standard' | 'Express'>('Standard');
   const [isProcessing, setIsProcessing] = useState(false);
+  const submittingRef = useRef(false);
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
 
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-  const shipping = subtotal > 2500 ? 0 : 150;
+  const savedAddress = customerInfo?.address
+    ? {
+        name: customerInfo.name,
+        email: customerInfo.email,
+        phone: customerInfo.phone,
+        address: customerInfo.address,
+      }
+    : null;
+
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const shipping = shippingMethod === 'Express' ? 249 : subtotal > 2500 ? 0 : 150;
+  const selectedEta = SHIPPING_METHODS.find(m => m.id === shippingMethod)?.eta || '3–7 business days';
 
   // Discount calculation
   let discountPercent = 0;
@@ -56,37 +103,102 @@ export const CheckoutPage: React.FC = () => {
     showToast('Promo code removed', 'info');
   };
 
-  // ✅ FIX: Properly await the async createOrder function
+  const useSaved = () => {
+    if (!savedAddress) return;
+    setCustomer(savedAddress);
+    setAddressSource('saved');
+  };
+
+  const useNew = () => {
+    setAddressSource('new');
+  };
+
+  const paymentLabel = () => {
+    const labels: Record<string, string> = {
+      'Cash on Delivery': 'Cash on Delivery (COD)',
+      'GCash': 'GCash e-Wallet',
+      'Maya': 'Maya e-Wallet',
+      'Credit / Debit Card': 'Credit / Debit Card',
+    };
+    return labels[paymentMethod] || paymentMethod;
+  };
+
+  // ✅ Validate bago mag-submit (walang fake na order)
+  const validateCheckout = (): string | null => {
+    if (items.length === 0) {
+      return 'Your cart is empty. Add items before checking out.';
+    }
+
+    for (const item of items) {
+      if (!Number.isInteger(item.qty) || item.qty < 1) {
+        return `"${item.name}" has an invalid quantity. Review your cart before checking out.`;
+      }
+    }
+
+    for (const item of items) {
+      const availability = checkCatalogAvailability(item);
+      if (!availability.found) {
+        return `"${item.name}" is no longer available. Remove it and try again.`;
+      }
+      if (!availability.sizeOk) {
+        return `The selected size (${item.size || 'Standard'}) for "${item.name}" is no longer available.`;
+      }
+      const stk = getStock(item.id);
+      if (stk <= 0) {
+        return `"${item.name}" is currently out of stock. Please remove it from your cart.`;
+      }
+      if (item.qty > stk) {
+        return `Only ${stk} unit${stk === 1 ? '' : 's'} of "${item.name}" is available. Please reduce the quantity.`;
+      }
+    }
+
+    if (!customer.name.trim()) {
+      return 'Please enter your full name.';
+    }
+    if (!customer.email.trim() || !customer.email.includes('@')) {
+      return 'Please enter a valid email address.';
+    }
+    if (!customer.phone.trim() || customer.phone.replace(/\D/g, '').length < 10) {
+      return 'Please enter a valid mobile number.';
+    }
+    if (!customer.address.trim()) {
+      return 'Please enter your complete delivery address.';
+    }
+    return null;
+  };
+
+  // ✅ FIX: Properly await the async createOrder function + unique-submit guard
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!customer.name.trim()) {
-      showToast('Please enter your full name', 'warning');
-      return;
-    }
-    if (!customer.email.trim() || !customer.email.includes('@')) {
-      showToast('Please enter a valid email address', 'warning');
-      return;
-    }
-    if (!customer.phone.trim() || customer.phone.length < 8) {
-      showToast('Please enter a valid contact number', 'warning');
-      return;
-    }
-    if (!customer.address.trim()) {
-      showToast('Please enter your complete delivery address', 'warning');
+    // Prevent duplicate submission mula sa repeated clicks habang nagse-save.
+    if (submittingRef.current || isProcessing) return;
+
+    const validationMessage = validateCheckout();
+    if (validationMessage) {
+      showToast(validationMessage, 'warning');
       return;
     }
 
+    submittingRef.current = true;
     setIsProcessing(true);
 
     try {
-      // ✅ AWAIT the createOrder function
-      const order = await createOrder(customer, appliedCode, paymentMethod);
-      
+      // ✅ AWAIT ang createOrder (ipapasa ang napiling items + shipping)
+      const order = await createOrder(
+        customer,
+        appliedCode,
+        paymentMethod,
+        items,
+        shippingMethod,
+        shipping,
+        selectedEta
+      );
+
       if (order) {
         setCompletedOrder(order);
         showToast(`Order ${order.orderId} placed successfully!`, 'success');
-        // ✅ Cart is NOT cleared automatically - the user can still see their items
+        // ✅ Purhased items lang ang inaalis sa cart (partial checkout)
       } else {
         showToast('Failed to place order. Please try again.', 'warning');
       }
@@ -94,22 +206,24 @@ export const CheckoutPage: React.FC = () => {
       console.error('Order placement error:', error);
       showToast('An error occurred. Please try again.', 'warning');
     } finally {
+      submittingRef.current = false;
       setIsProcessing(false);
     }
   };
 
-  // If order was just placed, show the beautiful instant receipt confirmation
+  // Kong confirmed na ang order (sa totoong backend), ipakita ang confirmation.
   if (completedOrder) {
+    const isCod = completedOrder.payment === 'Cash on Delivery';
     return (
       <div className="w-full max-w-[750px] mx-auto px-4 py-10 animate-fadeIn">
         <div className="rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xl p-6 sm:p-10 space-y-6">
-          
+
           <div className="text-center space-y-2">
             <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400 flex items-center justify-center text-3xl">
               <Check className="w-8 h-8" />
             </div>
             <span className="text-xs uppercase font-extrabold tracking-widest text-emerald-600">
-              Payment Confirmed
+              Order Confirmed
             </span>
             <h2 className="text-3xl font-black font-serif text-stone-900 dark:text-white">
               Thank You for Your Order!
@@ -129,6 +243,13 @@ export const CheckoutPage: React.FC = () => {
               <span className="font-bold text-stone-900 dark:text-white text-right max-w-xs truncate">{completedOrder.customer.address}</span>
             </div>
             <div className="flex justify-between">
+              <span className="text-stone-500">Shipping:</span>
+              <span className="font-bold text-stone-900 dark:text-white">
+                {completedOrder.shippingMethod || 'Standard'}
+                {completedOrder.eta ? ` • ${completedOrder.eta}` : ''}
+              </span>
+            </div>
+            <div className="flex justify-between">
               <span className="text-stone-500">Payment Method:</span>
               <span className="font-bold text-stone-900 dark:text-white">{completedOrder.payment}</span>
             </div>
@@ -138,15 +259,42 @@ export const CheckoutPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Honest payment status — hindi nagfa-claim ng bayad na hindi pa nangyayari */}
+          {isCod ? (
+            <div className="p-4 rounded-2xl bg-stone-50 dark:bg-stone-800/60 border border-stone-100 dark:border-stone-800 text-xs">
+              <p className="font-bold text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
+                <Banknote className="w-3.5 h-3.5 text-stone-500" /> Payment: Pay ₱{completedOrder.total.toLocaleString()} when your parcel arrives
+              </p>
+            </div>
+          ) : (
+            <PaymentPanel order={completedOrder} />
+          )}
+
           {/* Purchased Items List */}
           <div className="space-y-3">
             <h4 className="font-bold text-xs uppercase tracking-wider text-stone-500">Purchased Items</h4>
             <div className="divide-y divide-stone-100 dark:divide-stone-800">
               {completedOrder.items.map((item, i) => (
-                <div key={i} className="py-2.5 flex items-center justify-between text-xs">
-                  <div>
-                    <p className="font-bold text-stone-900 dark:text-white">{item.name}</p>
-                    <p className="text-stone-400">Size: {item.size || 'Standard'} • Qty: {item.qty}</p>
+                <div key={i} className="py-2.5 flex items-center justify-between text-xs gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-lg bg-stone-100 dark:bg-stone-800 flex items-center justify-center p-1 shrink-0">
+                      <ProductVisual
+                        category="clothes"
+                        subCategory={item.subCategory || 'tshirt'}
+                        colorName={item.color || 'White'}
+                        bgColor="#2A3459"
+                        name={item.name}
+                        image={item.image}
+                        className="w-8 h-8 object-contain"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-stone-900 dark:text-white truncate">{item.name}</p>
+                      <p className="text-stone-400">
+                        Size: {item.size || 'Standard'}
+                        {item.color ? ` • ${item.color}` : ''} • Qty: {item.qty}
+                      </p>
+                    </div>
                   </div>
                   <p className="font-bold text-stone-900 dark:text-white font-serif">₱{(item.price * item.qty).toLocaleString()}</p>
                 </div>
@@ -171,7 +319,7 @@ export const CheckoutPage: React.FC = () => {
               <span>{completedOrder.shipping === 0 ? 'FREE' : `₱${completedOrder.shipping.toLocaleString()}`}</span>
             </div>
             <div className="flex justify-between text-base font-black text-stone-900 dark:text-indigo-500 pt-2 border-t border-stone-200 dark:border-stone-800">
-              <span>Total Paid:</span>
+              <span>Order Total:</span>
               <span>₱{completedOrder.total.toLocaleString()}</span>
             </div>
           </div>
@@ -197,7 +345,7 @@ export const CheckoutPage: React.FC = () => {
     );
   }
 
-  if (cart.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="max-w-[700px] mx-auto px-4 py-16 text-center space-y-4">
         <h2 className="text-2xl font-bold">No items in your cart to checkout</h2>
@@ -211,9 +359,14 @@ export const CheckoutPage: React.FC = () => {
     );
   }
 
+  const inputCls = (disabled?: boolean) =>
+    `w-full px-4 py-3 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-stone-900 dark:text-white ${
+      disabled ? 'opacity-60 cursor-not-allowed' : ''
+    }`;
+
   return (
     <div className="w-full max-w-[1300px] mx-auto px-4 sm:px-8 py-8 space-y-8 animate-fadeIn">
-      
+
       {/* Header */}
       <div className="flex items-center justify-between pb-6 border-b border-stone-200 dark:border-stone-800">
         <div className="space-y-1">
@@ -229,39 +382,96 @@ export const CheckoutPage: React.FC = () => {
         </div>
         <div className="flex items-center gap-2 text-emerald-600 text-xs font-bold bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1.5 rounded-full border border-emerald-200 dark:border-emerald-800">
           <ShieldCheck className="w-4 h-4" />
-          <span>Encrypted Transaction</span>
+          <span>Secure Checkout</span>
         </div>
       </div>
 
       {/* Grid: Details on Left, Order Summary on Right */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* Left Form: Delivery and Payment */}
+
+        {/* Left Form: Delivery, Shipping and Payment */}
         <form onSubmit={handlePlaceOrder} className="lg:col-span-7 space-y-8">
-          
-          {/* Customer Details Box */}
+
+          {/* Delivery Address Box */}
           <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm space-y-5">
             <h2 className="text-lg font-bold font-serif text-stone-900 dark:text-white flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-stone-900 text-white dark:bg-indigo-500 dark:text-white text-xs font-bold flex items-center justify-center">1</span>
-              Delivery Information
+              Delivery Address
             </h2>
+
+            {/* Select existing saved address OR add a new one */}
+            {savedAddress && (
+              <div className="space-y-2">
+                <div
+                  onClick={useSaved}
+                  className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-start gap-3 ${
+                    addressSource === 'saved'
+                      ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20 ring-1 ring-indigo-500'
+                      : 'border-stone-200 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-800/40'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="addressSource"
+                    checked={addressSource === 'saved'}
+                    onChange={useSaved}
+                    className="mt-1 text-indigo-500 focus:ring-indigo-500"
+                  />
+                  <div>
+                    <p className="text-xs font-bold text-stone-900 dark:text-white flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-indigo-500" /> Use my saved address
+                    </p>
+                    <p className="text-[11px] text-stone-600 dark:text-stone-300 mt-0.5">
+                      {savedAddress.name} • {savedAddress.phone}
+                    </p>
+                    <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5 leading-relaxed">
+                      {savedAddress.address}
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  onClick={useNew}
+                  className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-start gap-3 ${
+                    addressSource === 'new'
+                      ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20 ring-1 ring-indigo-500'
+                      : 'border-stone-200 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-800/40'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="addressSource"
+                    checked={addressSource === 'new'}
+                    onChange={useNew}
+                    className="mt-1 text-indigo-500 focus:ring-indigo-500"
+                  />
+                  <div>
+                    <p className="text-xs font-bold text-stone-900 dark:text-white">Deliver to a new address</p>
+                    <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
+                      Enter contact name, phone number, and the complete delivery address below.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5 sm:col-span-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-stone-600 dark:text-stone-400">
-                  Full Name *
+                  Contact Name *
                 </label>
                 <input
                   type="text"
                   required
+                  disabled={addressSource === 'saved'}
                   placeholder="e.g. Juan Dela Cruz"
                   value={customer.name}
                   onChange={(e) => {
                     const v = e.target.value;
                     setCustomer({ ...customer, name: v });
-                    saveCustomerInfo({ name: v });
+                    if (addressSource === 'new') saveCustomerInfo({ name: v });
                   }}
-                  className="w-full px-4 py-3 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-stone-900 dark:text-white"
+                  className={inputCls(addressSource === 'saved')}
                 />
               </div>
 
@@ -272,14 +482,15 @@ export const CheckoutPage: React.FC = () => {
                 <input
                   type="email"
                   required
+                  disabled={addressSource === 'saved'}
                   placeholder="juan@example.com"
                   value={customer.email}
                   onChange={(e) => {
                     const v = e.target.value;
                     setCustomer({ ...customer, email: v });
-                    saveCustomerInfo({ email: v });
+                    if (addressSource === 'new') saveCustomerInfo({ email: v });
                   }}
-                  className="w-full px-4 py-3 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-stone-900 dark:text-white"
+                  className={inputCls(addressSource === 'saved')}
                 />
               </div>
 
@@ -290,14 +501,15 @@ export const CheckoutPage: React.FC = () => {
                 <input
                   type="tel"
                   required
+                  disabled={addressSource === 'saved'}
                   placeholder="0917 123 4567"
                   value={customer.phone}
                   onChange={(e) => {
                     const v = e.target.value;
                     setCustomer({ ...customer, phone: v });
-                    saveCustomerInfo({ phone: v });
+                    if (addressSource === 'new') saveCustomerInfo({ phone: v });
                   }}
-                  className="w-full px-4 py-3 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-stone-900 dark:text-white"
+                  className={inputCls(addressSource === 'saved')}
                 />
               </div>
 
@@ -308,32 +520,80 @@ export const CheckoutPage: React.FC = () => {
                 <textarea
                   required
                   rows={3}
+                  disabled={addressSource === 'saved'}
                   placeholder="House/Unit No., Street, Barangay, City, Province, Postal Code"
                   value={customer.address}
                   onChange={(e) => {
                     const v = e.target.value;
                     setCustomer({ ...customer, address: v });
-                    saveCustomerInfo({ address: v });
+                    if (addressSource === 'new') saveCustomerInfo({ address: v });
                   }}
-                  className="w-full px-4 py-3 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-stone-900 dark:text-white"
+                  className={inputCls(addressSource === 'saved')}
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Shipping Method Box */}
+          <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm space-y-4">
+            <h2 className="text-lg font-bold font-serif text-stone-900 dark:text-white flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-stone-900 text-white dark:bg-indigo-500 dark:text-white text-xs font-bold flex items-center justify-center">2</span>
+              Shipping Method
+            </h2>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {SHIPPING_METHODS.map((method) => {
+                const isSelected = shippingMethod === method.id;
+                const fee = method.id === 'Express' ? 249 : subtotal > 2500 ? 0 : 150;
+                return (
+                  <div
+                    key={method.id}
+                    onClick={() => setShippingMethod(method.id)}
+                    className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-start gap-3 ${
+                      isSelected
+                        ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20 ring-1 ring-indigo-500'
+                        : 'border-stone-200 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-800/40'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="shippingMethod"
+                      checked={isSelected}
+                      onChange={() => setShippingMethod(method.id)}
+                      className="mt-1 text-indigo-500 focus:ring-indigo-500"
+                    />
+                    <div>
+                      <p className="text-xs font-bold text-stone-900 dark:text-white flex items-center gap-1.5">
+                        <Truck className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                        {method.id} Delivery
+                      </p>
+                      <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">{method.desc}</p>
+                      <p className="text-[11px] font-bold text-stone-700 dark:text-stone-300 mt-1 flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> ETA: {method.eta}
+                      </p>
+                      <p className="text-[11px] font-black text-stone-900 dark:text-white mt-1">
+                        {fee === 0 ? <b className="text-emerald-600 font-bold">FREE</b> : `₱${fee.toLocaleString()}`}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
           {/* Payment Method Box */}
           <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm space-y-4">
             <h2 className="text-lg font-bold font-serif text-stone-900 dark:text-white flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-stone-900 text-white dark:bg-indigo-500 dark:text-white text-xs font-bold flex items-center justify-center">2</span>
+              <span className="w-6 h-6 rounded-full bg-stone-900 text-white dark:bg-indigo-500 dark:text-white text-xs font-bold flex items-center justify-center">3</span>
               Payment Method
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
                 { id: 'Cash on Delivery', label: 'Cash on Delivery (COD)', icon: Banknote, desc: 'Pay cash when your parcel arrives' },
-                { id: 'GCash', label: 'GCash e-Wallet', icon: Smartphone, desc: 'Instant QR / Mobile Wallet' },
-                { id: 'Maya', label: 'Maya e-Wallet', icon: Smartphone, desc: 'Direct wallet payment' },
-                { id: 'Credit / Debit Card', label: 'Credit / Debit Card', icon: CreditCard, desc: 'Visa & Mastercard supported' }
+                { id: 'GCash', label: 'GCash e-Wallet', icon: Smartphone, desc: 'Wallet payment (settled around delivery)' },
+                { id: 'Maya', label: 'Maya e-Wallet', icon: Smartphone, desc: 'Wallet payment (settled around delivery)' },
+                { id: 'Credit / Debit Card', label: 'Credit / Debit Card', icon: CreditCard, desc: 'Card payment (settled around delivery)' }
               ].map((method) => {
                 const Icon = method.icon;
                 const isSelected = paymentMethod === method.id;
@@ -365,6 +625,16 @@ export const CheckoutPage: React.FC = () => {
                 );
               })}
             </div>
+
+            {/* Honest note: walang online gateway na nakakonekta */}
+            <div className="p-3.5 rounded-2xl bg-stone-50 dark:bg-stone-800/60 border border-stone-100 dark:border-stone-800 text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed flex items-start gap-2">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-stone-400" />
+              <span>
+                {paymentMethod === 'Cash on Delivery'
+                  ? 'You pay cash when your parcel arrives. This checkout only records your order — it does not charge anything now.'
+                  : `No online gateway is connected, so selecting ${paymentLabel()} only records your order — it will not charge your wallet or card. Payment is settled around delivery.`}
+              </span>
+            </div>
           </div>
 
           <button
@@ -378,7 +648,7 @@ export const CheckoutPage: React.FC = () => {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Processing Transaction...
+                Placing Order...
               </>
             ) : (
               `Place Order • ₱${total.toLocaleString()}`
@@ -390,16 +660,16 @@ export const CheckoutPage: React.FC = () => {
         {/* Right Summary Column */}
         <div className="lg:col-span-5 space-y-6">
           <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xl space-y-6">
-            
+
             <h2 className="text-lg font-bold font-serif text-stone-900 dark:text-white pb-3 border-b border-stone-200 dark:border-stone-800">
-              Order Breakdown ({cart.length} Items)
+              Order Summary ({items.length} Items)
             </h2>
 
             {/* Items scroll area */}
             <div className="max-h-60 overflow-y-auto divide-y divide-stone-100 dark:divide-stone-800 pr-1">
-              {cart.map((item, idx) => (
+              {items.map((item, idx) => (
                 <div key={idx} className="py-3 flex items-center justify-between text-xs gap-3">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
                     <div className="w-10 h-10 rounded-lg bg-stone-100 dark:bg-stone-800 flex items-center justify-center p-1 shrink-0">
                       <ProductVisual
                         category="clothes"
@@ -411,9 +681,13 @@ export const CheckoutPage: React.FC = () => {
                         className="w-8 h-8 object-contain"
                       />
                     </div>
-                    <div>
-                      <p className="font-bold text-stone-900 dark:text-white truncate max-w-[170px]">{item.name}</p>
-                      <p className="text-stone-400">Qty: {item.qty} • Size: {item.size || 'M'}</p>
+                    <div className="min-w-0">
+                      <p className="font-bold text-stone-900 dark:text-white truncate max-w-[160px]">{item.name}</p>
+                      <p className="text-stone-400">
+                        {item.size ? `Size: ${item.size}` : 'Standard'}
+                        {item.color ? ` • ${item.color}` : ''} • Qty: {item.qty}
+                      </p>
+                      <p className="text-stone-400 mt-0.5">₱{item.price.toLocaleString()} each</p>
                     </div>
                   </div>
                   <span className="font-bold text-stone-900 dark:text-white font-serif">₱{(item.price * item.qty).toLocaleString()}</span>
@@ -481,8 +755,13 @@ export const CheckoutPage: React.FC = () => {
               )}
 
               <div className="flex justify-between text-stone-600 dark:text-stone-400">
-                <span>Shipping Delivery</span>
+                <span>{shippingMethod} Delivery {shippingMethod === 'Express' ? '(₱249)' : subtotal > 2500 ? '(FREE)' : '(₱150)'}</span>
                 <span>{shipping === 0 ? <b className="text-emerald-500 uppercase font-bold">FREE</b> : `₱${shipping.toLocaleString()}`}</span>
+              </div>
+
+              <div className="flex justify-between text-[11px] text-stone-400">
+                <span>Estimated delivery</span>
+                <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {selectedEta}</span>
               </div>
 
               <div className="pt-3 border-t border-stone-200 dark:border-stone-800 flex justify-between items-baseline">
