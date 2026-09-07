@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { PageType, GenderType, CartItem, Order, User, CustomerDetails, PaymentInfo } from '../types';
 import { PRODUCTS_CONFIG } from '../data/products';
-import { API_BASE_URL, API_SERVER_URL, registerAccount, signupAccount, fetchStoreProducts } from '../service/api';
+import { API_BASE_URL, API_SERVER_URL, registerAccount, signupAccount, fetchStoreProducts, setAuthToken, clearAuthToken, authHeaders } from '../service/api';
 import { setStoredPassword } from '../service/passwords';
 import { initiatePayment, isOnlinePayment } from '../service/payments';
 
@@ -267,7 +267,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.log(`🔄 Syncing ${orders.length} orders to server...`);
       const response = await fetch(SYNC_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ orders })
       });
       
@@ -510,7 +510,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             const exists = prev.some(o => o.orderId === orderId);
             
             if (!exists) {
-              fetch(`${serverUrl}/api/orders/${orderId}`)
+              fetch(`${serverUrl}/api/orders/${orderId}`, { headers: authHeaders() })
                 .then(res => res.json())
                 .then((fullOrder: Order) => {
                   if (fullOrder && fullOrder.customer?.name?.toLowerCase() === user.username.toLowerCase()) {
@@ -914,7 +914,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/orders`);
+      const response = await fetch(`${API_BASE_URL}/orders`, { headers: authHeaders() });
       if (response.ok) {
         const serverOrders = await response.json() as Order[];
         
@@ -961,7 +961,7 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ status: newStatus })
       });
 
@@ -1018,7 +1018,7 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/orders/${orderId}/${path}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(body)
       });
       const result = await response.json().catch(() => ({}));
@@ -1151,7 +1151,8 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
     // I-save muna ang account sa backend (totoong account).
     // Kapag offline ang backend, magpapatuloy bilang local account (fallback).
     try {
-      await signupAccount(formattedName, usernameKey, email.trim(), password);
+      const created = await signupAccount(formattedName, usernameKey, email.trim(), password);
+      if (created?.token) setAuthToken(created.token);
     } catch (e: any) {
       const msg = String(e?.message || '').toLowerCase();
       if (msg.includes('taken') || msg.includes('exist')) {
@@ -1248,6 +1249,7 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
   };
 
   const logout = () => {
+    clearAuthToken();
     setCart([]);
     setOrders([]);
     setUser({ username: '', isLoggedIn: false });

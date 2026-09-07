@@ -4,12 +4,13 @@ import {
   Package, ShoppingBag, ArrowRight, Truck, CheckCircle2, 
   Star, XCircle, MapPin, User,
   CreditCard, AlertCircle, Send, Edit2, Trash2, Store, 
-  RefreshCcw, Box, Banknote, Undo2, BadgeCheck
+  RefreshCcw, Box, Banknote, Undo2, BadgeCheck,
+  ChevronDown, Loader2, RefreshCw
 } from 'lucide-react';
 import { ProductVisual } from './ProductVisual';
 import { PaymentPanel } from './PaymentPanel';
 import { OrderStatus, Order } from '../types';
-import { API_SERVER_URL } from '../service/api';
+import { API_SERVER_URL, fetchOrderTracking, OrderTrackingEntry } from '../service/api';
 
 const SERVER_URL = API_SERVER_URL;
 
@@ -408,6 +409,73 @@ export const OrdersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [deletedOrderIds, setDeletedOrderIds] = useState<Set<string>>(new Set());
 
+  // ✅ Order tracking (expandable timeline) — live data mula sa backend.
+  const [trackingOpenId, setTrackingOpenId] = useState<string | null>(null);
+  const [trackingData, setTrackingData] = useState<Record<string, any>>({});
+  const [trackingLoading, setTrackingLoading] = useState<Record<string, boolean>>({});
+  const [trackingError, setTrackingError] = useState<Record<string, string>>({});
+
+  // ✅ Format ISO timestamp -> "Sep 4, 3:36 PM"
+  const formatTimestamp = (iso?: string): string => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
+
+  // ✅ Kino-convert ang `by` field sa madaling-maintindihang label.
+  const actorLabel = (by?: string): string => {
+    if (!by) return 'C-HUB Store';
+    if (by === 'customer') return 'You';
+    if (by === 'system' || by === 'admin') return 'C-HUB Store';
+    return by;
+  };
+
+  // ✅ Kukunin ang live tracking ng isang order (may fallback sa last-synced data).
+  const loadTracking = async (order: Order) => {
+    const orderId = order.orderId;
+    if (trackingLoading[orderId]) return;
+    if (trackingData[orderId]) return;
+    setTrackingLoading(prev => ({ ...prev, [orderId]: true }));
+    setTrackingError(prev => ({ ...prev, [orderId]: '' }));
+    try {
+      const res = await fetchOrderTracking(orderId);
+      setTrackingData(prev => ({ ...prev, [orderId]: res.order }));
+    } catch (e: any) {
+      // Fallback: gamitin ang last-synced status (hindi gumagawa ng fake data).
+      setTrackingData(prev => ({
+        ...prev,
+        [orderId]: {
+          orderId,
+          status: order.status,
+          statusHistory: (order.statusHistory || []).map(h => ({
+            status: h.status,
+            timestamp: h.timestamp || order.updatedAt || '',
+          })),
+          fulfillment: order.fulfillment,
+          updatedAt: order.updatedAt,
+        },
+      }));
+      setTrackingError(prev => ({ ...prev, [orderId]: 'Offline — showing last synced status.' }));
+    } finally {
+      setTrackingLoading(prev => ({ ...prev, [orderId]: false }));
+    }
+  };
+
+  const toggleTracking = (order: Order) => {
+    if (trackingOpenId === order.orderId) {
+      setTrackingOpenId(null);
+      return;
+    }
+    setTrackingOpenId(order.orderId);
+    loadTracking(order);
+  };
+
   // ✅ Handle stepper click: nagsisilbing order FILTER lang (hindi nagbabago
   // ng status — ang status ay binabago lamang ng backend/na-authorize na actions)
   const handleFilterClick = (step: ProgressStep) => {
@@ -736,6 +804,18 @@ export const OrdersPage: React.FC = () => {
     // ✅ Completed order still within the 24-hour review window
     const inReviewWindow = status === 'Completed' && !hasReview && isWithin24h(order.updatedAt);
 
+    // ✅ Tracking timeline data (live mula sa backend, fallback sa last-synced)
+    const track = trackingData[order.orderId];
+    const trackStatus = track?.status || status;
+    const serverHistory: OrderTrackingEntry[] = Array.isArray(track?.statusHistory) ? track.statusHistory : [];
+    const localHistory: OrderTrackingEntry[] = (order.statusHistory || []).map(h => ({
+      status: h.status,
+      timestamp: h.timestamp || order.updatedAt || '',
+      by: (h as any).by,
+      note: (h as any).note,
+    }));
+    const timeline = serverHistory.length ? serverHistory : localHistory;
+
     return (
       <div key={order.orderId} className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm transition-all hover:shadow-md">
         {/* Top Bar */}
@@ -775,6 +855,113 @@ export const OrdersPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Track Order — expandable live timeline (may loading/error states) */}
+        <button
+          type="button"
+          onClick={() => toggleTracking(order)}
+          className="mt-4 w-full flex items-center justify-between px-4 py-3 rounded-2xl border border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-800/60 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors group"
+        >
+          <span className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-stone-700 dark:text-stone-200">
+            <Truck className="w-4 h-4 text-indigo-500" /> Track Order
+          </span>
+          <ChevronDown
+            className={`w-4 h-4 text-stone-400 transition-transform ${trackingOpenId === order.orderId ? 'rotate-180' : ''}`}
+          />
+        </button>
+
+        {trackingOpenId === order.orderId && (
+          <div className="mt-3 p-4 rounded-2xl bg-slate-50 dark:bg-stone-800/60 border border-stone-200 dark:border-stone-800 animate-fadeIn">
+            {trackingLoading[order.orderId] ? (
+              <div className="flex flex-col items-center gap-3 py-6">
+                <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+                <p className="text-xs text-stone-500 dark:text-stone-400">Loading tracking...</p>
+              </div>
+            ) : (
+              <>
+                {trackingError[order.orderId] && (
+                  <div className="mb-3 flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-stone-100 dark:bg-stone-900 text-[11px] text-stone-500 dark:text-stone-400">
+                    <span>{trackingError[order.orderId]}</span>
+                    <button
+                      onClick={() => {
+                        setTrackingData(prev => { const n = { ...prev }; delete n[order.orderId]; return n; });
+                        loadTracking(order);
+                      }}
+                      className="shrink-0 flex items-center gap-1 font-bold text-indigo-600 hover:text-indigo-700"
+                    >
+                      <RefreshCw className="w-3 h-3" /> Retry
+                    </button>
+                  </div>
+                )}
+
+                {(track?.fulfillment?.carrier || track?.fulfillment?.trackingNumber || track?.fulfillment?.estimatedDelivery) && (
+                  <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-2 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900 text-xs">
+                    {track.fulfillment.carrier && (
+                      <div>
+                        <p className="text-stone-400 dark:text-stone-500 text-[10px] uppercase font-bold">Courier</p>
+                        <p className="font-bold text-stone-700 dark:text-stone-200">{track.fulfillment.carrier}</p>
+                      </div>
+                    )}
+                    {track.fulfillment.trackingNumber && (
+                      <div>
+                        <p className="text-stone-400 dark:text-stone-500 text-[10px] uppercase font-bold">Tracking No.</p>
+                        <p className="font-bold text-stone-700 dark:text-stone-200">{track.fulfillment.trackingNumber}</p>
+                      </div>
+                    )}
+                    {track.fulfillment.estimatedDelivery && (
+                      <div>
+                        <p className="text-stone-400 dark:text-stone-500 text-[10px] uppercase font-bold">Est. Delivery</p>
+                        <p className="font-bold text-stone-700 dark:text-stone-200">{track.fulfillment.estimatedDelivery}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <p className="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-3 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-indigo-500" /> Tracking Timeline
+                </p>
+
+                <ol className="relative">
+                  {timeline.map((entry, idx) => {
+                    const cfg = getStatusConfig(entry.status);
+                    const isLast = idx === timeline.length - 1;
+                    const isCurrent = String(entry.status).toLowerCase() === String(trackStatus).toLowerCase();
+                    return (
+                      <li key={idx} className="relative flex gap-3 pb-5 last:pb-0">
+                        {!isLast && (
+                          <span className="absolute left-[13px] top-7 bottom-0 w-px bg-stone-200 dark:bg-stone-700" />
+                        )}
+                        <span
+                          className={`relative z-10 shrink-0 w-7 h-7 rounded-full flex items-center justify-center border ${
+                            isCurrent
+                              ? `${cfg.bgColor} ${cfg.color} border-transparent`
+                              : 'bg-white dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-stone-400'
+                          }`}
+                        >
+                          {cfg.icon}
+                        </span>
+                        <div className="min-w-0 pt-0.5">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                            <span className={`text-sm font-bold ${isCurrent ? cfg.color : 'text-stone-700 dark:text-stone-200'}`}>
+                              {cfg.label}
+                            </span>
+                            {entry.timestamp && (
+                              <span className="text-[11px] text-stone-400">{formatTimestamp(entry.timestamp)}</span>
+                            )}
+                          </div>
+                          {entry.note && (
+                            <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">{entry.note}</p>
+                          )}
+                          <p className="text-[11px] text-stone-400">{actorLabel(entry.by)}</p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Context-specific sections — every status card is read-only in status;
             ang tanging customer actions ay ang mga naka-validate na buttons ito */}

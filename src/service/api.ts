@@ -11,6 +11,42 @@ export const API_BASE_URL = (
 
 export const API_SERVER_URL = API_BASE_URL.replace(/\/api$/, '');
 
+// ── Auth token (session) helpers ─────────────────────────────────────────
+// Ang token ay inilalabas ng backend sa login/signup. Ginagamit ito para sa
+// order ownership (ang customer ay makikita lang ang KANYANG mga order).
+// Naka-store sa localStorage — pareho ng ginawa sa admin (chub_admin_session).
+const TOKEN_KEY = 'chub_token';
+
+export const getAuthToken = (): string | null => {
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+};
+
+export const setAuthToken = (token: string) => {
+  try {
+    localStorage.setItem(TOKEN_KEY, token);
+  } catch {
+    /* storage unavailable */
+  }
+};
+
+export const clearAuthToken = () => {
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    /* storage unavailable */
+  }
+};
+
+// Headers para sa mga request na nangangailangan ng naka-log-in na session.
+export const authHeaders = (): Record<string, string> => {
+  const t = getAuthToken();
+  return t ? { Authorization: `Bearer ${t}` } : {};
+};
+
 export interface CustomerShippingInfo {
   fullName: string;
   email: string;
@@ -100,16 +136,70 @@ export const fetchStoreProducts = async () => {
   }
 };
 
-// ✅ 3. GET - Kunin ang sariling Orders ng Customer gamit ang Email
+// ✅ 3. GET - Kunin ang sariling Orders ng Customer gamit ang Email.
+// Ang backend ay nagbabalik lang ng mga order na pagmamay-ari ng session.
 export const fetchMyOrders = async (email: string) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/orders?email=${encodeURIComponent(email)}`);
+    const response = await fetch(`${API_BASE_URL}/orders?email=${encodeURIComponent(email)}`, {
+      headers: authHeaders(),
+    });
     if (!response.ok) throw new Error('Failed to fetch my orders');
     return await response.json();
   } catch (error) {
     console.error('❌ My Orders Fetch Error:', error);
     return [];
   }
+};
+
+// ✅ 3b. GET - Kunin ang live tracking + status history ng isang order.
+// Ang backend ay nagbabalik lang nito sa may-ari ng order (ownership check).
+export interface OrderTrackingItem {
+  name: string;
+  qty?: number;
+  price?: number;
+  image?: string;
+  size?: string;
+  color?: string;
+}
+
+export interface OrderTrackingEntry {
+  status: string;
+  timestamp: string;
+  by?: string;
+  note?: string;
+}
+
+export interface OrderTrackingResponse {
+  success: boolean;
+  order: {
+    orderId: string;
+    date: string;
+    createdAt?: string;
+    status: string;
+    updatedAt?: string;
+    statusHistory: OrderTrackingEntry[];
+    items?: OrderTrackingItem[];
+    total?: number;
+    payment?: string;
+    customer?: { name?: string; email?: string; address?: string };
+    fulfillment?: {
+      carrier?: string;
+      trackingNumber?: string;
+      estimatedDelivery?: string;
+    };
+    paymentInfo?: { status?: string; paidAt?: string; method?: string };
+  };
+}
+
+export const fetchOrderTracking = async (orderId: string): Promise<OrderTrackingResponse> => {
+  const response = await fetch(`${API_BASE_URL}/orders/${encodeURIComponent(orderId)}/tracking`, {
+    headers: authHeaders(),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.error || 'Could not load tracking info.');
+  }
+  return data as OrderTrackingResponse;
 };
 
 // ✅ 4. POST - Mag-submit ng Customer Review
@@ -145,7 +235,11 @@ export const signupAccount = async (name: string, username: string, email: strin
   if (!response.ok) {
     throw new Error(data.error || 'Could not create account');
   }
-  return data as { success: boolean; user: { name: string; username: string; email: string } };
+  return data as {
+    success: boolean;
+    user: { name: string; username: string; email: string };
+    token?: string;
+  };
 };
 
 // ✅ 6. POST - Mag-login (username O email + password). Walang MFA na.
@@ -159,7 +253,11 @@ export const loginAccount = async (identifier: string, password: string) => {
   if (!response.ok) {
     throw new Error(data.error || 'Invalid username/email or password');
   }
-  return data as { success: boolean; user: { name: string; username: string; email: string } };
+  return data as {
+    success: boolean;
+    user: { name: string; username: string; email: string };
+    token?: string;
+  };
 };
 
 // ✅ 7. POST - I-register ang username + email para sa password reset (Forgot Password).
