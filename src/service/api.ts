@@ -6,7 +6,7 @@ const processEnv: Record<string, any> = typeof process !== 'undefined' && proces
 export const API_BASE_URL = (
   env.VITE_API_URL ||
   processEnv.NEXT_PUBLIC_API_URL ||
-  'https://c-hub-backend-1jy4.onrender.com/api'
+  '/api'
 ).replace(/\/+$/, '');
 
 export const API_SERVER_URL = API_BASE_URL.replace(/\/api$/, '');
@@ -202,26 +202,198 @@ export const fetchOrderTracking = async (orderId: string): Promise<OrderTracking
   return data as OrderTrackingResponse;
 };
 
-// ✅ 4. POST - Mag-submit ng Customer Review
-export const submitStoreReview = async (reviewData: {
-  orderId: string;
+// —— Wishlist (per-user, backend-persisted) —————————————————————————————
+// Bawat request ay may authHeaders() — ang backend ay nagbabalik lang ng
+// wishlist na pagmamay-ari ng session (hindi nakikita ang sa ibang user).
+
+export interface WishlistServerItem {
+  productId: string;
+  addedAt: string;
+  product: (Record<string, any> & { stock?: number; stockStatus?: string }) | null;
+}
+
+// ✅ 3c. GET - Ang buong wishlist ng kasalukuyang user.
+export const fetchWishlist = async (): Promise<WishlistServerItem[]> => {
+  const response = await fetch(`${API_BASE_URL}/wishlist`, { headers: authHeaders() });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data?.error || 'Could not load wishlist.');
+  return (data?.items || []) as WishlistServerItem[];
+};
+
+// ✅ 3d. POST - Idagdag ang isang product (dedup - hindi madodoble).
+export const addWishlistItem = async (productId: string) => {
+  const response = await fetch(`${API_BASE_URL}/wishlist`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ productId }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data?.error || 'Could not add to wishlist.');
+  return data as { success: boolean; alreadyInWishlist?: boolean; item?: { productId: string; addedAt: string } };
+};
+
+// ✅ 3e. DELETE - Alisin ang isang product sa wishlist.
+export const removeWishlistItem = async (productId: string) => {
+  const response = await fetch(`${API_BASE_URL}/wishlist/${encodeURIComponent(productId)}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data?.error || 'Could not remove from wishlist.');
+  return data as { success: boolean };
+};
+
+// ✅ 4. Product Reviews & Ratings
+export interface ProductReview {
+  id: string;
+  productId: string;
   customerName: string;
   rating: number;
   comment: string;
-}) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/reviews`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(reviewData),
-    });
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Review Error:', error);
-  }
+  date: string;
+  verifiedPurchase: boolean;
+  adminReply?: { comment: string; date: string } | null;
+}
+
+export interface ProductReviewAggregate {
+  success: boolean;
+  productId: string;
+  averageRating: number;
+  ratingCount: number;
+  distribution: Record<number, number>;
+  reviews: ProductReview[];
+}
+
+// GET - Kunin ang mga reviews + aggregate ng isang product (public).
+export const fetchProductReviews = async (productId: string): Promise<ProductReviewAggregate> => {
+  const response = await fetch(`${API_BASE_URL}/reviews?productId=${encodeURIComponent(productId)}`);
+  const data = await response.json();
+  if (!response.ok) throw new Error(data?.error || 'Could not load reviews.');
+  return data as ProductReviewAggregate;
 };
+
+// POST - Mag-submit (verified buyer lang). May auth token.
+export const submitProductReview = async (reviewData: {
+  productId: string;
+  rating: number;
+  comment: string;
+}) => {
+  const response = await fetch(`${API_BASE_URL}/reviews`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(reviewData),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data?.error || 'Could not submit review.');
+  return data as { success: boolean; review: ProductReview };
+};
+
+// PATCH - I-edit ang sariling review.
+export const updateProductReview = async (reviewId: string, patch: { rating?: number; comment?: string }) => {
+  const response = await fetch(`${API_BASE_URL}/reviews/${encodeURIComponent(reviewId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(patch),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data?.error || 'Could not update review.');
+  return data as { success: boolean; review: ProductReview };
+};
+
+// DELETE - I-delete ang sariling review.
+export const deleteProductReview = async (reviewId: string) => {
+  const response = await fetch(`${API_BASE_URL}/reviews/${encodeURIComponent(reviewId)}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data?.error || 'Could not delete review.');
+  return data as { success: boolean };
+};
+
+// ✅ 4b. Notifications API (server-synced bell)
+export interface ServerNotification {
+  id: string;
+  email: string;
+  username: string;
+  message: string;
+  type: 'info' | 'success' | 'warning';
+  orderId?: string;
+  timestamp: string;
+  createdAt: string;
+  read: boolean;
+}
+
+// ✅ Voucher validation response (GET /vouchers/:code).
+export interface VoucherValidation {
+  valid: boolean;
+  code?: string;
+  type?: 'percent' | 'fixed';
+  value?: number;
+  minSubtotal?: number;
+  maxDiscount?: number;
+  discountAmount?: number;
+  description?: string;
+  expiresAt?: string | null;
+  error?: string;
+}
+
+// GET - I-validate ang voucher code para sa checkout preview (walang usage bump).
+export const validateVoucher = async (code: string, subtotal: number): Promise<VoucherValidation> => {
+  const clean = String(code || '').trim().toUpperCase();
+  if (!clean) return { valid: false, error: 'Enter a voucher code.' };
+  const response = await fetch(`${API_BASE_URL}/vouchers/${encodeURIComponent(clean)}?subtotal=${Math.max(0, Math.round(subtotal))}`);
+  let data: VoucherValidation = { valid: false };
+  try {
+    data = await response.json();
+  } catch { /* ignore */ }
+  return data;
+};
+
+// GET - Kunin ang mga notifications ng user (token required).
+export const fetchUserNotifications = async (): Promise<ServerNotification[]> => {
+  const response = await fetch(`${API_BASE_URL}/notifications`, { headers: authHeaders() });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data?.error || 'Could not load notifications.');
+  return Array.isArray(data) ? data : [];
+};
+
+// PATCH - Mark lahat bilang basa.
+export const markAllNotificationsRead = async (): Promise<boolean> => {
+  const response = await fetch(`${API_BASE_URL}/notifications/read-all`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+  });
+  return response.ok;
+};
+
+// PATCH - Mark ang isang notification.
+export const markNotificationRead = async (id: string): Promise<boolean> => {
+  const response = await fetch(`${API_BASE_URL}/notifications/${encodeURIComponent(id)}/read`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+  });
+  return response.ok;
+};
+
+// DELETE - I-delete ang isang notification.
+export const deleteServerNotification = async (id: string): Promise<boolean> => {
+  const response = await fetch(`${API_BASE_URL}/notifications/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  return response.ok;
+};
+
+// DELETE - I-clear lahat ng notifications.
+export const clearServerNotifications = async (): Promise<boolean> => {
+  const response = await fetch(`${API_BASE_URL}/notifications`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  return response.ok;
+};
+
 
 // ✅ 5. POST - Mag-sign up (name + username + email + password).
 // Totoong account na naka-save sa backend (data/users.json).

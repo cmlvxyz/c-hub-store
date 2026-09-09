@@ -13,6 +13,7 @@ import { ShopPage } from './components/ShopPage';
 import { CartPage } from './components/CartPage';
 import { CheckoutPage } from './components/CheckoutPage';
 import { OrdersPage } from './components/OrdersPage';
+import { WishlistPage } from './components/WishlistPage';
 import { LoginPage } from './components/LoginPage';
 import { ForgotPassword } from './components/ForgotPassword';
 import { ResetPassword } from './components/ResetPassword';
@@ -47,7 +48,7 @@ const MainLayout: React.FC = () => {
   const isCategoryPage = ['clothes', 'shoes', 'pants', 'underwear', 'accessories'].includes(page);
 
   // Guest na humahawak sa cart/checkout/orders -> ilabas ang Login overlay.
-  const showAuthBlock = !user.isLoggedIn && ['cart', 'checkout', 'orders'].includes(page);
+  const showAuthBlock = !user.isLoggedIn && ['cart', 'checkout', 'orders', 'wishlist'].includes(page);
 
   const containerBgStyle = isCategoryPage
     ? { backgroundColor: activeBgColor }
@@ -75,6 +76,8 @@ const MainLayout: React.FC = () => {
         return <CheckoutPage />;
       case 'orders':
         return <OrdersPage />;
+      case 'wishlist':
+        return <WishlistPage />;
       case 'me':
         return <Me />;
       case 'edit-profile':

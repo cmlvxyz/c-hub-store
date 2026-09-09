@@ -10,7 +10,7 @@ import {
 import { ProductVisual } from './ProductVisual';
 import { PaymentPanel } from './PaymentPanel';
 import { OrderStatus, Order } from '../types';
-import { API_SERVER_URL, fetchOrderTracking, OrderTrackingEntry } from '../service/api';
+import { API_SERVER_URL, fetchOrderTracking, OrderTrackingEntry, authHeaders } from '../service/api';
 
 const SERVER_URL = API_SERVER_URL;
 
@@ -663,28 +663,45 @@ export const OrdersPage: React.FC = () => {
 
   // ✅ Handle review submission (pagkatapos ng review -> authorized 'complete')
   const handleSubmitReview = (orderId: string, rating: number, comment: string) => {
-    fetch(`${SERVER_URL}/api/reviews`, {
+    const order = allOrders.find(o => o.orderId === orderId);
+    const productId = Array.isArray(order?.items) && order.items.length > 0
+      ? (order!.items[0].id || '')
+      : '';
+
+    const req = {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        orderId,
-        rating,
-        comment,
-        customerName: allOrders.find(o => o.orderId === orderId)?.customer?.name || user.username || '',
-        date: new Date().toISOString()
-      })
-    })
-    .then(res => res.json())
-    .then(data => {
-      console.log('✅ Review saved:', data);
-      showToast('⭐ Thank you for your review!', 'success');
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ productId, rating, comment }),
+    };
+
+    const finish = (ok: boolean, msg: string) => {
+      if (ok) showToast(msg, 'success'); else showToast(msg, 'warning');
       completeOrderAfterReview(orderId);
       setReviewingOrder(null);
-    })
-    .catch(err => {
-      console.error('Failed to submit review:', err);
-      showToast('Failed to submit review. Please try again.', 'warning');
-    });
+    };
+
+    // Kung walang product id, direktang i-complete na lang ang order.
+    if (!productId) {
+      finish(true, '⭐ Order completed!');
+      return;
+    }
+
+    fetch(`${SERVER_URL}/api/reviews`, req)
+      .then(async res => ({ ok: res.ok, data: await res.json().catch(() => ({})) }))
+      .then(({ ok, data }) => {
+        if (ok) {
+          console.log('✅ Review saved:', data);
+          finish(true, '⭐ Thank you for your review!');
+        } else {
+          // Kung hindi ma-submit ang review (e.g. paulit-ulit), i-complete parin ang order.
+          console.warn('Review skipped:', data?.error);
+          finish(true, '⭐ Order completed!');
+        }
+      })
+      .catch(err => {
+        console.error('Failed to submit review:', err);
+        finish(true, '⭐ Order completed!');
+      });
   };
 
   // ✅ Handle Cancel Order (autorized customer action — backend-validated)
@@ -1195,36 +1212,91 @@ export const OrdersPage: React.FC = () => {
         {(status === 'Refund Requested') && (
           <div className="mt-4 p-4 rounded-2xl bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900 text-xs flex items-start gap-2">
             <RefreshCcw className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
-            <p className="text-stone-600 dark:text-stone-300">
-              Your refund request has been submitted and is awaiting approval by C-HUB.
-            </p>
+            <div>
+              <p className="text-stone-600 dark:text-stone-300">
+                Your refund request has been submitted and is awaiting approval by C-HUB.
+              </p>
+              {order.refundRequest?.reason && (
+                <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1">
+                  Reason: <span className="italic">"{order.refundRequest.reason}"</span>
+                </p>
+              )}
+            </div>
           </div>
         )}
 
         {(status === 'Refunded') && (
           <div className="mt-4 p-4 rounded-2xl bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900 text-xs flex items-start gap-2">
             <Banknote className="w-4 h-4 text-purple-500 shrink-0 mt-0.5" />
-            <p className="text-stone-600 dark:text-stone-300">
-              This order has been refunded. The amount will be returned via your payment method.
-            </p>
+            <div>
+              <p className="text-stone-600 dark:text-stone-300">
+                {order.refund?.amount
+                  ? <>This order has been refunded <b>₱{order.refund.amount.toLocaleString()}</b> via {order.refund.method || 'your payment method'}.</>
+                  : 'This order has been refunded. The amount will be returned via your payment method.'}
+              </p>
+              {order.refund?.note && (
+                <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1">Note: {order.refund.note}</p>
+              )}
+            </div>
           </div>
         )}
 
         {(status === 'Return Requested') && (
           <div className="mt-4 p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900 text-xs flex items-start gap-2">
             <Undo2 className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
-            <p className="text-stone-600 dark:text-stone-300">
-              Your return request has been submitted and is awaiting approval by C-HUB.
-            </p>
+            <div>
+              <p className="text-stone-600 dark:text-stone-300">
+                Your return request has been submitted and is awaiting approval by C-HUB.
+              </p>
+              {order.returnRequest?.reason && (
+                <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1">
+                  Reason: <span className="italic">"{order.returnRequest.reason}"</span>
+                </p>
+              )}
+            </div>
           </div>
         )}
 
         {(status === 'Returned') && (
           <div className="mt-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 text-xs flex items-start gap-2">
             <Undo2 className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
-            <p className="text-stone-600 dark:text-stone-300">
-              The items in this order have been returned.
-            </p>
+            <div>
+              <p className="text-stone-600 dark:text-stone-300">
+                The items in this order have been returned.
+              </p>
+              {order.returnRef?.note && (
+                <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1">Note: {order.returnRef.note}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Denied outcomes: status falls back to 'Completed' — ipakita ang denial note */}
+        {status === 'Completed' && order.refund?.status === 'denied' && (
+          <div className="mt-4 p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 text-xs flex items-start gap-2">
+            <RefreshCcw className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-stone-600 dark:text-stone-300">
+                Your refund request was declined by C-HUB.
+              </p>
+              {order.refund.note && (
+                <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1">Reason: {order.refund.note}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {status === 'Completed' && order.returnRef?.status === 'denied' && (
+          <div className="mt-4 p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 text-xs flex items-start gap-2">
+            <Undo2 className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-stone-600 dark:text-stone-300">
+                Your return request was declined by C-HUB.
+              </p>
+              {order.returnRef.note && (
+                <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1">Reason: {order.returnRef.note}</p>
+              )}
+            </div>
           </div>
         )}
       </div>

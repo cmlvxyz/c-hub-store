@@ -22,10 +22,6 @@ server: {
           target: 'http://localhost:3006',
           changeOrigin: true,
         },
-        '/images': {
-          target: 'http://localhost:3006',
-          changeOrigin: true,
-        },
       },
     },
   };

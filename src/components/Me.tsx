@@ -31,7 +31,7 @@ import {
  * Hindi gumagawa ng bagong auth at hindi binabago ang ibang screens.
  */
 export const Me: React.FC = () => {
-  const { user, customerInfo, setPage, logout } = useStore();
+  const { user, customerInfo, setPage, logout, wishlistCount } = useStore();
 
   // Local "coming soon" toast — dito lang sa Me, hindi global.
   const [meToast, setMeToast] = useState<{ message: string } | null>(null);
@@ -209,6 +209,12 @@ export const Me: React.FC = () => {
             <div className="space-y-3">
               <SectionTitle>My Account</SectionTitle>
               <Card>
+                <Row
+                  icon={<Heart className="w-5 h-5 text-indigo-500" />}
+                  label="Wishlist"
+                  subtitle={wishlistCount > 0 ? `${wishlistCount} saved item${wishlistCount === 1 ? '' : 's'}` : 'Products you saved'}
+                  onClick={() => setPage('wishlist')}
+                />
                 <Row
                   icon={<User className="w-5 h-5 text-indigo-500" />}
                   label="Personal Information"

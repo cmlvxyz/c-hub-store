@@ -5,6 +5,7 @@ import { ShieldCheck, Truck, ArrowLeft, Tag, Check, CreditCard, Banknote, Smartp
 import { ProductVisual } from './ProductVisual';
 import { PRODUCTS_CONFIG } from '../data/products';
 import { PaymentPanel } from './PaymentPanel';
+import { validateVoucher } from '../service/api';
 
 // Shipping methods na available sa checkout. Ang Standard ay sumusunod sa
 // umiiral na rule (FREE kapag PHP 2,500+), habang ang Express ay flat rate.
@@ -52,6 +53,9 @@ export const CheckoutPage: React.FC = () => {
   const [discountCode, setDiscountCode] = useState('');
   const [appliedCode, setAppliedCode] = useState('');
   const [discountError, setDiscountError] = useState('');
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [discountInfo, setDiscountInfo] = useState('');
+  const [discountLoading, setDiscountLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('Cash on Delivery');
   const [shippingMethod, setShippingMethod] = useState<'Standard' | 'Express'>('Standard');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -71,28 +75,31 @@ export const CheckoutPage: React.FC = () => {
   const shipping = shippingMethod === 'Express' ? 249 : subtotal > 2500 ? 0 : 150;
   const selectedEta = SHIPPING_METHODS.find(m => m.id === shippingMethod)?.eta || '3–7 business days';
 
-  // Discount calculation
-  let discountPercent = 0;
-  if (appliedCode === 'PWD' || appliedCode === 'SENIOR') {
-    discountPercent = 0.20;
-  } else if (appliedCode === 'WELCOME10') {
-    discountPercent = 0.10;
-  }
-
-  const discountAmount = Math.round(subtotal * discountPercent);
   const total = Math.max(0, subtotal - discountAmount + shipping);
 
-  const handleApplyDiscount = (e: React.FormEvent) => {
+  // May voucher ba na ibinago ang subtotal? I-revalidate lang kung nagbago.
+  const handleApplyDiscount = async (e: React.FormEvent) => {
     e.preventDefault();
     const clean = discountCode.trim().toUpperCase();
     if (!clean) return;
+    if (discountLoading) return;
 
-    if (clean === 'PWD' || clean === 'SENIOR' || clean === 'WELCOME10') {
-      setAppliedCode(clean);
-      setDiscountError('');
-      showToast(`Promo code '${clean}' applied successfully!`, 'success');
-    } else {
-      setDiscountError('Invalid promo code. Try PWD, SENIOR, or WELCOME10.');
+    setDiscountLoading(true);
+    setDiscountError('');
+    try {
+      const result = await validateVoucher(clean, subtotal);
+      if (result.valid && result.discountAmount && result.discountAmount > 0) {
+        setAppliedCode(clean);
+        setDiscountAmount(result.discountAmount);
+        setDiscountInfo(result.description || `${result.value}${result.type === 'percent' ? '%' : ' PHP'} off`);
+        showToast(`Voucher '${clean}' applied — save ₱${result.discountAmount}!`, 'success');
+      } else {
+        setDiscountError(result.error || 'This voucher cannot be applied to your order.');
+      }
+    } catch {
+      setDiscountError('Could not check voucher. Please try again.');
+    } finally {
+      setDiscountLoading(false);
     }
   };
 
@@ -100,6 +107,8 @@ export const CheckoutPage: React.FC = () => {
     setAppliedCode('');
     setDiscountCode('');
     setDiscountError('');
+    setDiscountAmount(0);
+    setDiscountInfo('');
     showToast('Promo code removed', 'info');
   };
 
@@ -721,9 +730,10 @@ export const CheckoutPage: React.FC = () => {
                   ) : (
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white dark:bg-indigo-500 dark:hover:bg-indigo-600 dark:text-white rounded-xl text-xs font-bold transition-all shadow"
+                      disabled={discountLoading}
+                      className="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white dark:bg-indigo-500 dark:hover:bg-indigo-600 dark:text-white rounded-xl text-xs font-bold transition-all shadow disabled:opacity-50"
                     >
-                      Apply
+                      {discountLoading ? 'Checking…' : 'Apply'}
                     </button>
                   )}
                 </div>
@@ -734,7 +744,7 @@ export const CheckoutPage: React.FC = () => {
                 )}
                 {appliedCode && (
                   <p className="text-[11px] text-emerald-600 font-bold flex items-center gap-1">
-                    <Check className="w-3 h-3" /> Applied {appliedCode} ({discountPercent * 100}% Discount)
+                    <Check className="w-3 h-3" /> Applied {appliedCode}{discountInfo ? ` — ${discountInfo}` : ''} (save ₱{discountAmount.toLocaleString()})
                   </p>
                 )}
               </form>

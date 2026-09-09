@@ -6,10 +6,11 @@ import { PRODUCTS_CONFIG, CategoryData, withWhiteFirst } from '../data/products'
 import { ProductVisual } from './ProductVisual';
 import {
   ChevronLeft, ChevronRight, ChevronUp, ChevronDown,
-  ShoppingBag, ShoppingCart, Menu, X, Check, Instagram,
-  Facebook, Linkedin
+  ShoppingBag, ShoppingCart, Menu, X, Check, Heart, Instagram,
+  Facebook, Linkedin, Search, ArrowDownWideNarrow
 } from 'lucide-react';
-import { GenderType, PageType } from '../types';
+import { GenderType, PageType, SortOption } from '../types';
+import { ProductReviewsSection } from './ProductReviewsSection';
 
 /* ─── Hex color helpers (mobile background) ─── */
 const hexToRgb = (hex: string) => {
@@ -70,6 +71,29 @@ const SLIDE_EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 const SIDEBAR_SLOT = '33.333%';
 type SlideDir = 'next' | 'prev';
 
+// Hanapin + i-sort ang mga product. 'default' => kapareho ng dating order (white first).
+const SORT_LABELS: Record<SortOption, string> = {
+  default: 'Featured',
+  'price-asc': 'Price: Low to High',
+  'price-desc': 'Price: High to Low',
+  'name-asc': 'Name: A to Z',
+  'name-desc': 'Name: Z to A',
+};
+
+const sortList = (arr: FlatProduct[], query: string, sortOption: SortOption): FlatProduct[] => {
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? arr.filter((p) => `${p.name} ${p.colorName}`.toLowerCase().includes(q))
+    : arr.slice();
+  switch (sortOption) {
+    case 'price-asc': return filtered.sort((a, b) => a.price - b.price);
+    case 'price-desc': return filtered.sort((a, b) => b.price - a.price);
+    case 'name-asc': return filtered.sort((a, b) => a.name.localeCompare(b.name));
+    case 'name-desc': return filtered.sort((a, b) => b.name.localeCompare(a.name));
+    default: return withWhiteFirst(filtered);
+  }
+};
+
 const slideVariants: Variants = {
   enter: (dir: number) => {
     if (dir > 0) return { x: 400, y: 300, scale: 0.3, opacity: 0, rotate: 10, zIndex: 30 };
@@ -107,7 +131,7 @@ const MobileProductVisual: React.FC<{ product: FlatProduct }> = ({ product }) =>
    MOBILE LAYOUT (md:hidden)
    ============================================================ */
 const MobileShowcase: React.FC<{ categoryKey: string }> = ({ categoryKey }) => {
-  const { gender, setGender, subCategory, setSubCategory, setPage, addToCart, user, showToast, searchQuery, setShopBgColor, currentProductIndex, setCurrentProductIndex, getStock } = useStore();
+  const { gender, setGender, subCategory, setSubCategory, setPage, addToCart, user, showToast, searchQuery, setSearchQuery, sortOption, setSortOption, setShopBgColor, currentProductIndex, setCurrentProductIndex, getStock } = useStore();
   const genderOptions: GenderType[] = ['men', 'women', 'boys', 'girls'];
 
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
@@ -124,6 +148,7 @@ const MobileShowcase: React.FC<{ categoryKey: string }> = ({ categoryKey }) => {
   const [idx, setIdx] = useState(0);
   const [size, setSize] = useState('S');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
   const [anim, setAnim] = useState<{ fromIdx: number; toIdx: number; dir: SlideDir; phase: 'prep' | 'run' } | null>(null);
   const touchStartRef = useRef<number | null>(null);
   const touchXRef = useRef<number>(0);
@@ -149,13 +174,10 @@ const MobileShowcase: React.FC<{ categoryKey: string }> = ({ categoryKey }) => {
   }, [categoryKey, gender, subCategory]);
 
   const filteredList = useMemo(() => {
-    const base = searchQuery.trim()
-      ? list.filter((p) => `${p.name} ${p.colorName}`.toLowerCase().includes(searchQuery.toLowerCase()))
-      : list;
-    return withWhiteFirst(base);
-  }, [list, searchQuery]);
+    return sortList(list, searchQuery, sortOption);
+  }, [list, searchQuery, sortOption]);
 
-  const orderedList = useMemo(() => withWhiteFirst(list), [list]);
+  const orderedList = useMemo(() => sortList(list, '', sortOption), [list, sortOption]);
 
   const shownActive = filteredList[idx] || filteredList[0] || list[0];
   const active = shownActive;
@@ -390,6 +412,61 @@ const MobileShowcase: React.FC<{ categoryKey: string }> = ({ categoryKey }) => {
         </button>
       </div>
 
+      {/* Search + Sort toolbar */}
+      <div className="flex items-center gap-2 px-4 pb-2">
+        <div className={`flex items-center gap-1.5 flex-1 h-9 rounded-full px-3 border transition-colors ${
+          bgIsLight ? 'bg-white/70 border-stone-200 text-stone-700' : 'bg-white/10 border-white/15 text-white'
+        }`}>
+          <Search className={`w-3.5 h-3.5 shrink-0 ${bgIsLight ? 'text-stone-400' : 'text-white/50'}`} />
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search products..."
+            className={`w-full bg-transparent text-xs font-medium focus:outline-none placeholder:opacity-50 ${bgIsLight ? 'text-stone-800' : 'text-white'}`}
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className={`shrink-0 ${bgIsLight ? 'text-stone-400 hover:text-stone-600' : 'text-white/50 hover:text-white'}`} aria-label="Clear search">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setSortOpen(v => !v)}
+            className={`h-9 pl-3 pr-2.5 rounded-full text-[10px] font-bold uppercase tracking-wide flex items-center gap-1 border transition-colors cursor-pointer ${
+              sortOption !== 'default'
+                ? (bgIsLight ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-indigo-500 border-indigo-500 text-white')
+                : (bgIsLight ? 'bg-white/70 border-stone-200 text-stone-600' : 'bg-white/10 border-white/15 text-white')
+            }`}
+          >
+            <ArrowDownWideNarrow className="w-3.5 h-3.5" />
+            {SORT_LABELS[sortOption]}
+            <ChevronDown className="w-3 h-3 opacity-70" />
+          </button>
+          {sortOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setSortOpen(false)} />
+              <div className={`absolute right-0 top-11 z-50 w-48 rounded-2xl p-1.5 shadow-2xl border ${bgIsLight ? 'bg-white border-stone-200' : 'bg-stone-900 border-white/15'}`}>
+                {(Object.keys(SORT_LABELS) as SortOption[]).map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => { setSortOption(opt); setSortOpen(false); }}
+                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                      sortOption === opt
+                        ? (bgIsLight ? 'bg-indigo-50 text-indigo-700' : 'bg-indigo-950/60 text-indigo-300')
+                        : (bgIsLight ? 'text-stone-700 hover:bg-stone-100' : 'text-stone-200 hover:bg-white/10')
+                    }`}
+                  >
+                    {SORT_LABELS[opt]}
+                    {sortOption === opt && <Check className="w-3.5 h-3.5" />}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
       {filteredList.length > 0 ? (
         <>
           <div className="grid grid-cols-[62%_38%] gap-1 px-4 pt-1 pb-4">
@@ -581,13 +658,16 @@ const DesktopShowcase: React.FC<{ categoryKey: string }> = ({ categoryKey }) => 
   const {
     page, gender, subCategory, currentProductIndex,
     setPage, setGender, setSubCategory, setCurrentProductIndex,
-    addToCart, user, isDarkTheme, showToast, getStock
+    addToCart, user, isDarkTheme, showToast, getStock,
+    isInWishlist, addToWishlist, removeFromWishlist,
+    searchQuery, setSearchQuery, sortOption, setSortOption
   } = useStore();
 
   const [activeTab, setActiveTab] = useState<string>(subCategory);
   const [selectedSize, setSelectedSize] = useState<string>('XL');
   const [direction, setDirection] = useState<number>(1);
   const [addedAnimation, setAddedAnimation] = useState<boolean>(false);
+  const [desktopSortOpen, setDesktopSortOpen] = useState<boolean>(false);
   const lastIndexRef = useRef(currentProductIndex);
 
   const categoryConfig = PRODUCTS_CONFIG[categoryKey]?.[gender] || PRODUCTS_CONFIG['clothes']['men'];
@@ -595,7 +675,10 @@ const DesktopShowcase: React.FC<{ categoryKey: string }> = ({ categoryKey }) => 
     ? subCategory
     : categoryConfig.defaultSubCategory;
 
-  const currentProducts = withWhiteFirst(categoryConfig.products[currentSubCategory] || []);
+  const currentProducts = useMemo(
+    () => sortList(buildList(categoryKey, currentSubCategory, gender), searchQuery, sortOption),
+    [categoryKey, currentSubCategory, gender, searchQuery, sortOption]
+  );
   const activeProduct = currentProducts[currentProductIndex] || currentProducts[0];
 
   useEffect(() => {
@@ -717,6 +800,70 @@ const DesktopShowcase: React.FC<{ categoryKey: string }> = ({ categoryKey }) => 
           })}
         </div>
 
+        {/* Search + Sort toolbar (desktop) */}
+        <div className="flex items-center gap-3 ml-6 lg:ml-10 mb-2 relative z-20">
+          <div className={`flex items-center gap-2 h-10 w-64 max-w-full rounded-full px-4 border transition-colors ${
+            isDarkTheme ? 'bg-white/10 border-white/15 text-white' : 'bg-white/60 border-stone-200/70 text-stone-700'
+          }`}>
+            <Search className={`w-4 h-4 shrink-0 ${isDarkTheme ? 'text-white/50' : 'text-stone-400'}`} />
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search products..."
+              className={`w-full bg-transparent text-sm font-medium focus:outline-none placeholder:opacity-50 ${isDarkTheme ? 'text-white' : 'text-stone-800'}`}
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} className={`shrink-0 hover:opacity-70 ${isDarkTheme ? 'text-white/60' : 'text-stone-400'}`} aria-label="Clear search">
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          <div className="relative">
+            <button
+              onClick={() => setDesktopSortOpen(v => !v)}
+              className={`h-10 pl-4 pr-3 rounded-full text-xs font-bold uppercase tracking-wide flex items-center gap-1.5 border transition-colors cursor-pointer ${
+                sortOption !== 'default'
+                  ? 'bg-indigo-500/90 border-indigo-400/30 text-white shadow-md shadow-indigo-500/25'
+                  : isDarkTheme
+                  ? 'bg-white/10 border-white/15 text-white/80 hover:text-white hover:bg-white/20'
+                  : 'bg-white/60 border-stone-200/70 text-stone-700 hover:bg-white/80'
+              }`}
+            >
+              <ArrowDownWideNarrow className="w-4 h-4" />
+              {SORT_LABELS[sortOption]}
+              <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+            </button>
+            {desktopSortOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setDesktopSortOpen(false)} />
+                <div className={`absolute left-0 top-12 z-50 w-56 rounded-2xl p-1.5 shadow-2xl border ${
+                  isDarkTheme ? 'bg-stone-900 border-white/15' : 'bg-white border-stone-200'
+                }`}>
+                  {(Object.keys(SORT_LABELS) as SortOption[]).map((opt) => (
+                    <button
+                      key={opt}
+                      onClick={() => { setSortOption(opt); setDesktopSortOpen(false); }}
+                      className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                        sortOption === opt
+                          ? (isDarkTheme ? 'bg-indigo-950/60 text-indigo-300' : 'bg-indigo-50 text-indigo-700')
+                          : (isDarkTheme ? 'text-stone-200 hover:bg-white/10' : 'text-stone-700 hover:bg-stone-100')
+                      }`}
+                    >
+                      {SORT_LABELS[opt]}
+                      {sortOption === opt && <Check className="w-3.5 h-3.5" />}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          {searchQuery.trim() && (
+            <span className="text-xs font-semibold text-stone-400 dark:text-white/40">
+              {currentProducts.length} result{currentProducts.length === 1 ? '' : 's'}
+            </span>
+          )}
+        </div>
+
         {/* 3-Column Showcase Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-4 items-center relative py-4 flex-1">
 
@@ -801,6 +948,23 @@ const DesktopShowcase: React.FC<{ categoryKey: string }> = ({ categoryKey }) => 
 
           {/* CENTER COLUMN: Product Image */}
           <div className="lg:col-span-5 flex flex-col items-center justify-center relative py-2 lg:-top-10">
+            {currentProducts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center text-center py-10 px-4 w-full max-w-sm">
+                <Search className={`w-8 h-8 mb-3 ${isDarkTheme ? 'text-white/40' : 'text-stone-400'}`} />
+                <p className={`text-sm font-semibold ${textColorClass}`}>No products found</p>
+                <p className={`text-xs mt-1 ${subTextColorClass}`}>
+                  Try a different search term or clear the search to see all products.
+                </p>
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className={`mt-4 px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    isDarkTheme ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-stone-900/5 text-stone-700 hover:bg-stone-900/10'
+                  }`}
+                >
+                  Clear search
+                </button>
+              </div>
+            ) : (
             <div className="relative w-full max-w-[380px] sm:max-w-[440px] flex flex-col items-center justify-center">
               <div className="relative w-full h-[360px] sm:h-[400px] flex items-center justify-center overflow-visible">
                 <AnimatePresence initial={false} custom={direction} mode="popLayout">
@@ -862,6 +1026,7 @@ const DesktopShowcase: React.FC<{ categoryKey: string }> = ({ categoryKey }) => 
                 </>
               )}
             </div>
+            )}
           </div>
 
           {/* RIGHT COLUMN: Price & Size */}
@@ -947,21 +1112,58 @@ const DesktopShowcase: React.FC<{ categoryKey: string }> = ({ categoryKey }) => 
                   In Stock · {currentStock} left
                 </span>
               )}
-              <button id="addToCartFloatingBtn" onClick={handleAddToCart} disabled={isOutOfStock}
-                className={`px-4 py-2 rounded-full font-bold text-xs flex items-center gap-1.5 transition-all duration-300 shadow-lg cursor-pointer disabled:opacity-50 disabled:pointer-events-none ${
-                  addedAnimation ? 'bg-emerald-600 text-white scale-105'
-                    : isDarkTheme ? 'bg-white text-stone-900 hover:bg-stone-100'
-                    : 'bg-indigo-500 text-white hover:bg-stone-800'
-                }`}>
-                {addedAnimation ? (
-                  <><Check className="w-3.5 h-3.5" /><span>Added</span></>
-                ) : (
-                  <><ShoppingBag className="w-3.5 h-3.5" /><span>{isOutOfStock ? 'Out of Stock' : 'Cart'}</span></>
-                )}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    if (!activeProduct) return;
+                    if (isInWishlist(currentProductId)) {
+                      removeFromWishlist(currentProductId);
+                    } else {
+                      addToWishlist({
+                        id: currentProductId,
+                        name: `${activeProduct.name || activeProduct.colorName}`,
+                        price: basePriceObj.price,
+                        originalPrice: basePriceObj.original,
+                        image: activeProduct.image,
+                        bgColor: activeProduct.bgColor,
+                        textColor: activeProduct.textColor,
+                        category: categoryKey,
+                        subCategory: currentSubCategory,
+                        gender: gender,
+                        sizes: availableSizes,
+                      });
+                    }
+                  }}
+                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 shadow-md cursor-pointer ${
+                    isInWishlist(currentProductId)
+                      ? 'bg-red-500 text-white'
+                      : isDarkTheme
+                      ? 'bg-white/10 text-white/80 hover:text-white hover:bg-white/20 border border-white/10'
+                      : 'bg-white/70 text-stone-500 hover:text-red-500 border border-white/20'
+                  }`}
+                  aria-label={isInWishlist(currentProductId) ? 'Remove from wishlist' : 'Add to wishlist'}
+                  title={isInWishlist(currentProductId) ? 'Remove from wishlist' : 'Add to wishlist'}
+                >
+                  <Heart className={`w-4 h-4 ${isInWishlist(currentProductId) ? 'fill-current' : ''}`} />
+                </button>
+                <button id="addToCartFloatingBtn" onClick={handleAddToCart} disabled={isOutOfStock}
+                  className={`px-4 py-2 rounded-full font-bold text-xs flex items-center gap-1.5 transition-all duration-300 shadow-lg cursor-pointer disabled:opacity-50 disabled:pointer-events-none ${
+                    addedAnimation ? 'bg-emerald-600 text-white scale-105'
+                      : isDarkTheme ? 'bg-white text-stone-900 hover:bg-stone-100'
+                      : 'bg-indigo-500 text-white hover:bg-stone-800'
+                  }`}>
+                  {addedAnimation ? (
+                    <><Check className="w-3.5 h-3.5" /><span>Added</span></>
+                  ) : (
+                    <><ShoppingBag className="w-3.5 h-3.5" /><span>{isOutOfStock ? 'Out of Stock' : 'Cart'}</span></>
+                  )}
+                </button>
+              </div>
             </div>
           )}
         </div>
+
+        {currentProductId && <ProductReviewsSection productId={currentProductId} />}
 
       </div>
     </div>

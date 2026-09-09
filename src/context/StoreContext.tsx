@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { PageType, GenderType, CartItem, Order, User, CustomerDetails, PaymentInfo } from '../types';
+import { PageType, GenderType, CartItem, Order, User, CustomerDetails, PaymentInfo, WishlistItem, SortOption } from '../types';
 import { PRODUCTS_CONFIG } from '../data/products';
-import { API_BASE_URL, API_SERVER_URL, registerAccount, signupAccount, fetchStoreProducts, setAuthToken, clearAuthToken, authHeaders } from '../service/api';
+import { API_BASE_URL, API_SERVER_URL, registerAccount, signupAccount, fetchStoreProducts, setAuthToken, clearAuthToken, authHeaders, getAuthToken, fetchWishlist, addWishlistItem, removeWishlistItem, fetchUserNotifications, markAllNotificationsRead, markNotificationRead, deleteServerNotification, clearServerNotifications } from '../service/api';
 import { setStoredPassword } from '../service/passwords';
 import { initiatePayment, isOnlinePayment } from '../service/payments';
 
@@ -21,6 +21,7 @@ interface StoreContextType {
   activeTextColor: string;
   isDarkTheme: boolean;
   searchQuery: string;
+  sortOption: SortOption;
   shopBgColor: string;
   setShopBgColor: (color: string) => void;
   toast: { message: string; type?: 'info' | 'success' | 'warning' } | null;
@@ -29,6 +30,7 @@ interface StoreContextType {
   unreadCount: number;
   addNotification: (message: string, type?: 'info' | 'success' | 'warning', orderId?: string) => void;
   markNotificationsRead: () => void;
+  syncNotificationsFromServer: () => Promise<void>;
   removeNotification: (id: string) => void;
   clearNotifications: () => void;
   setPage: (page: PageType, subCategory?: string, gender?: GenderType) => void;
@@ -36,6 +38,7 @@ interface StoreContextType {
   setSubCategory: (sub: string) => void;
   setCurrentProductIndex: (idx: number) => void;
   setSearchQuery: (q: string) => void;
+  setSortOption: (opt: SortOption) => void;
   addToCart: (item: {
     id: string;
     name: string;
@@ -53,6 +56,12 @@ interface StoreContextType {
   getStock: (id: string) => number;
   stockStatusOf: (id: string) => 'In Stock' | 'Low Stock' | 'Out of Stock';
   refreshStock: () => Promise<void>;
+  wishlist: WishlistItem[];
+  wishlistCount: number;
+  isInWishlist: (id: string) => boolean;
+  addToWishlist: (product: { id: string; name?: string; price?: number; originalPrice?: number; image?: string; bgColor?: string; textColor?: string; category?: string; subCategory?: string; gender?: string; sizes?: string[] }) => void;
+  removeFromWishlist: (id: string) => void;
+  refreshWishlist: () => Promise<void>;
   createOrder: (customer: CustomerDetails, discountCode: string, paymentMethod: string, items?: CartItem[], shippingMethod?: string, shippingFee?: number, eta?: string) => Promise<Order | null>;
   checkoutItems: CartItem[];
   setCheckoutItems: (items: CartItem[]) => void;
@@ -101,6 +110,10 @@ const getProfileStorageKey = (username: string) => {
   return `chub_profile_${username.toLowerCase()}`;
 };
 
+const getWishlistStorageKey = (username: string) => {
+  return `chub_wishlist_${username.toLowerCase()}`;
+};
+
 const SYNC_URL = `${API_BASE_URL}/orders/sync`;
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -110,6 +123,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [currentProductIndex, setCurrentProductIndex] = useState<number>(0);
   const [lastCategoryPage, setLastCategoryPage] = useState<PageType>('clothes');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [sortOption, setSortOption] = useState<SortOption>('default');
   const [shopBgColor, setShopBgColor] = useState<string>('#ffffff');
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -183,6 +197,27 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const [ordersUpdated, setOrdersUpdated] = useState<number>(0);
 
+  // ✅ WISHLIST (per-user). Local snapshot + backend sync kapag may token.
+  const [wishlist, setWishlist] = useState<WishlistItem[]>(() => {
+    try {
+      if (user.isLoggedIn && user.username) {
+        const key = getWishlistStorageKey(user.username);
+        const saved = localStorage.getItem(key);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            console.log(`❤️ Loaded wishlist for ${user.username}:`, parsed.length, 'items');
+            return parsed;
+          }
+        }
+      }
+      return [];
+    } catch (e) {
+      console.error('Failed to load wishlist:', e);
+      return [];
+    }
+  });
+
   // Transient na listahan ng items na pinili sa Cart para sa partial checkout.
   // Hindi ito nire-replace ang cart — ito lang ang "kung anong bibilhin" ngayon.
   const [checkoutItems, setCheckoutItems] = useState<CartItem[]>([]);
@@ -224,6 +259,36 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
+  // Local snapshot para hindi mawala kahit offline o guest mode (walang token).
+  const persistNotifications = (list: NotificationItem[]) => {
+    try {
+      const key = user.isLoggedIn && user.username ? `chub_notifs_${user.username.toLowerCase()}` : 'chub_notifs_guest';
+      localStorage.setItem(key, JSON.stringify(list.slice(0, 50)));
+    } catch { /* ignore */ }
+  };
+
+  // I-sync ang notifications mula sa backend (kapag may token). Ang server ang
+  // source of truth — pinagsasama rito ang mga lokal lang na estado (SSE/guest).
+  const syncNotificationsFromServer = async () => {
+    if (!user.isLoggedIn || !getAuthToken()) return;
+    try {
+      const serverNotifs = await fetchUserNotifications();
+      if (!Array.isArray(serverNotifs)) return;
+      const serverIds = new Set(serverNotifs.map(s => s.id));
+      setNotifications(prev => {
+        // Panatilihin ang mga lokal na duplicate-free na SSE/order notifs.
+        const localOnly = prev.filter(n => !serverIds.has(n.id) && !serverNotifs.some(s =>
+          s.message === n.message && (s.orderId || undefined) === (n.orderId || undefined)
+        ));
+        const merged = [...serverNotifs, ...localOnly].slice(0, 30);
+        persistNotifications(merged);
+        return merged;
+      });
+    } catch (e) {
+      console.warn('⚠️ Notification sync failed:', e);
+    }
+  };
+
   const addNotification = (message: string, type: 'info' | 'success' | 'warning' = 'info', orderId?: string) => {
     const notification: NotificationItem = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -233,21 +298,38 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       timestamp: new Date().toISOString(),
       read: false,
     };
-    setNotifications(prev => [notification, ...prev].slice(0, 30));
+    setNotifications(prev => {
+      const next = [notification, ...prev].slice(0, 30);
+      persistNotifications(next);
+      return next;
+    });
     // Isa ring visual toast para siguradong makita ng user
     showToast(message, type);
   };
 
   const markNotificationsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setNotifications(prev => {
+      const next = prev.map(n => ({ ...n, read: true }));
+      persistNotifications(next);
+      return next;
+    });
+    // Best-effort sync sa server (mark-all-read).
+    if (getAuthToken()) markAllNotificationsRead().catch(() => {});
   };
 
   const removeNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+    setNotifications(prev => {
+      const next = prev.filter(n => n.id !== id);
+      persistNotifications(next);
+      return next;
+    });
+    if (getAuthToken()) deleteServerNotification(id).catch(() => {});
   };
 
   const clearNotifications = () => {
     setNotifications([]);
+    persistNotifications([]);
+    if (getAuthToken()) clearServerNotifications().catch(() => {});
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -345,6 +427,146 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.error('Failed to sync orders:', e);
     }
   }, [orders, user]);
+
+  useEffect(() => {
+    try {
+      if (user.isLoggedIn && user.username) {
+        const key = getWishlistStorageKey(user.username);
+        localStorage.setItem(key, JSON.stringify(wishlist));
+      }
+    } catch (e) {
+      console.error('Failed to sync wishlist:', e);
+    }
+  }, [wishlist, user]);
+
+  // ✅ WISHLIST ACTIONS — server-side (totoong account) o local (offline/guest mode).
+  // Ang wishlist ay laging naka-key sa username (hindi fake account-specific).
+  const isInWishlist = (id: string) => wishlist.some(item => item.productId === id);
+
+  const refreshWishlist = async () => {
+    try {
+      // Kapag may backend token, ang server ang source of truth.
+      if (user.isLoggedIn && user.username && getAuthToken()) {
+        const items = await fetchWishlist();
+        const mapped: WishlistItem[] = items.map(srv => ({
+          productId: srv.productId,
+          addedAt: srv.addedAt,
+          product: srv.product
+            ? {
+                ...srv.product,
+                color: srv.product.color,
+                colorName: srv.product.colorName || srv.product.color,
+              } as WishlistItem['product']
+            : null,
+        })).filter((it): it is WishlistItem => !!it.productId);
+        setWishlist(mapped);
+        console.log(`❤️ Refreshed wishlist from server:`, mapped.length, 'items');
+      }
+    } catch (e: any) {
+      // Offline/stale backend — mananatili ang local snapshot.
+      console.warn('Wishlist server refresh failed (using local):', e?.message);
+    }
+  };
+
+  const addToWishlist = (product: {
+    id: string;
+    name?: string;
+    price?: number;
+    originalPrice?: number;
+    image?: string;
+    bgColor?: string;
+    textColor?: string;
+    category?: string;
+    subCategory?: string;
+    gender?: string;
+    sizes?: string[];
+  }) => {
+    if (!user.isLoggedIn) {
+      showToast('Sign in to save items to your wishlist.', 'warning');
+      setPage('signin');
+      return;
+    }
+    if (!product?.id) return;
+
+    // Prevent duplicate entries.
+    if (isInWishlist(product.id)) {
+      showToast('Already in your wishlist.', 'info');
+      return;
+    }
+
+    const entry: WishlistItem = {
+      productId: product.id,
+      addedAt: new Date().toISOString(),
+      product: {
+        id: product.id,
+        name: product.name || product.id,
+        price: product.price || 0,
+        originalPrice: product.originalPrice,
+        image: product.image || '',
+        bgColor: product.bgColor || '#f4f4f5',
+        textColor: product.textColor || '#1c1917',
+        category: (product.category as any) || 'clothes',
+        subCategory: product.subCategory || '',
+        gender: (product.gender as any) || 'men',
+        sizes: product.sizes || [],
+      } as any,
+    };
+    setWishlist(prev => [entry, ...prev]);
+
+    // Best-effort server save (totoong account lang).
+    if (getAuthToken()) {
+      addWishlistItem(product.id).catch(async (e: any) => {
+        // Na-delete na ang product sa server — alisin sa wishlist.
+        console.warn('Wishlist add to server failed:', e?.message);
+        if (String(e?.message || '').toLowerCase().includes('not found')) {
+          setWishlist(prev => prev.filter(i => i.productId !== product.id));
+          showToast('This product is no longer available.', 'warning');
+        }
+      });
+    }
+    showToast('Added to wishlist.', 'success');
+  };
+
+  const removeFromWishlist = (id: string) => {
+    const before = wishlist.length;
+    setWishlist(prev => prev.filter(item => item.productId !== id));
+    if (before === wishlist.length) return;
+
+    if (getAuthToken()) {
+      removeWishlistItem(id).catch(() => {
+        /* non-blocking - local state na ang tatanggalin */
+      });
+    }
+    showToast('Removed from wishlist.', 'info');
+  };
+
+  useEffect(() => {
+    if (user.isLoggedIn && user.username) {
+      try {
+        const notifKey = `chub_notifs_${user.username.toLowerCase()}`;
+        const savedNotifs = localStorage.getItem(notifKey);
+        if (savedNotifs) {
+          const parsed = JSON.parse(savedNotifs);
+          if (Array.isArray(parsed)) setNotifications(parsed);
+        }
+      } catch { /* ignore */ }
+      // I-sync ang server-side notifications (kung may token) — dito kaya
+      // hindi mawala ang bell kahit mag-refresh ang page.
+      syncNotificationsFromServer();
+      const syncTimer = setInterval(syncNotificationsFromServer, 45000);
+      return () => clearInterval(syncTimer);
+    } else {
+      // Guest mode: i-restore ang guest snapshot.
+      try {
+        const saved = localStorage.getItem('chub_notifs_guest');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) setNotifications(parsed);
+        }
+      } catch { /* ignore */ }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.isLoggedIn, user.username]);
 
   useEffect(() => {
     if (user.isLoggedIn && user.username) {
@@ -586,6 +808,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         } catch (e) {
           console.error('❌ Bad order-deleted payload:', e);
         }
+      });
+
+      // Server-side notification (order placed/status/review reply) —
+      // i-refresh ang bell mula sa backend para laging naka-sync.
+      es.addEventListener('notification', () => {
+        syncNotificationsFromServer();
       });
 
     } catch (e) {
@@ -1114,10 +1342,31 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
       setCart([]);
     }
 
+    // I-load ang wishlist ng user (local snapshot muna, tapos server refresh).
+    try {
+      const wishlistKey = `chub_wishlist_${displayName.toLowerCase()}`;
+      const savedWishlist = localStorage.getItem(wishlistKey);
+      if (savedWishlist) {
+        const parsed = JSON.parse(savedWishlist);
+        setWishlist(Array.isArray(parsed) ? parsed : []);
+        console.log(`❤️ Loaded ${parsed.length} wishlist items for ${displayName}`);
+      } else {
+        setWishlist([]);
+      }
+    } catch (e) {
+      console.error('Failed to load wishlist on login:', e);
+      setWishlist([]);
+    }
+
     setOrdersUpdated(prev => prev + 1);
     console.log('🔄 ordersUpdated set to:', ordersUpdated + 1);
 
     showToast(`Welcome back, ${displayName}!`, 'success');
+
+    // Deferred server refresh ng wishlist (kung may token mula sa backend).
+    setTimeout(() => {
+      refreshWishlist();
+    }, 600);
   };
 
   const signup = async (fullName: string, username: string, email: string, password: string) => {
@@ -1181,6 +1430,7 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
 
     setOrders([]);
     setCart([]);
+    setWishlist([]);
 
     // I-save ang local password verifier (PBKDF2) — offline fallback lang.
     try {
@@ -1249,12 +1499,15 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
   };
 
   const logout = () => {
+    const lastUser = user.username || 'guest';
     clearAuthToken();
     setCart([]);
     setOrders([]);
+    setWishlist([]);
     setUser({ username: '', isLoggedIn: false });
     setOrdersUpdated(0);
     setNotifications([]);
+    try { localStorage.removeItem(`chub_notifs_${lastUser.toLowerCase()}`); } catch { /* ignore */ }
     showToast('Logged out successfully', 'info');
   };
 
@@ -1287,6 +1540,7 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
         unreadCount,
         addNotification,
         markNotificationsRead,
+        syncNotificationsFromServer,
         removeNotification,
         clearNotifications,
         setPage,
@@ -1294,6 +1548,8 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
         setSubCategory,
         setCurrentProductIndex,
         setSearchQuery,
+        sortOption,
+        setSortOption: (opt: SortOption) => setSortOption(opt),
         addToCart,
         updateCartQty,
         removeFromCart,
@@ -1302,6 +1558,12 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
         getStock,
         stockStatusOf,
         refreshStock,
+        wishlist,
+        wishlistCount: wishlist.length,
+        isInWishlist,
+        addToWishlist,
+        removeFromWishlist,
+        refreshWishlist,
         createOrder,
         checkoutItems,
         setCheckoutItems,

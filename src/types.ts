@@ -22,9 +22,17 @@ export type PageType =
   | 'faq'
   | 'shipping'
   | 'returns'
-  | 'size-guide';
+  | 'size-guide'
+  | 'wishlist';
 
 export type GenderType = 'men' | 'women' | 'boys' | 'girls';
+
+export type SortOption =
+  | 'default'
+  | 'price-asc'
+  | 'price-desc'
+  | 'name-asc'
+  | 'name-desc';
 
 export type OrderStatus = 
   | 'Pending'
@@ -62,6 +70,21 @@ export interface ProductItem {
   gender: GenderType;
   sizes: string[];
   sizePriceMap?: Record<string, { price: number; original: number }>;
+}
+
+// Isang naka-save na item sa Wishlist (product snapshot + stock live from backend).
+export interface WishlistItem {
+  productId: string;
+  addedAt: string;
+  product: (ProductItem & {
+    stock?: number;
+    stockStatus?: string;
+    lowStockThreshold?: number;
+    originalPrice?: number;
+    image?: string;
+    color?: string;
+    colorName?: string;
+  }) | null;
 }
 
 export interface SubCategoryHeadline {
@@ -157,6 +180,35 @@ export interface Order {
     }>;
   };
   channel?: string;
+  // ✅ Returns & Refunds (structured request + decision)
+  refundRequest?: {
+    reason: string;
+    requestedAt: string;
+    denied?: { note?: string; decidedAt?: string; by?: string };
+    approved?: { note?: string; decidedAt?: string; by?: string };
+  };
+  returnRequest?: {
+    reason: string;
+    requestedAt: string;
+    denied?: { note?: string; decidedAt?: string; by?: string };
+    approved?: { note?: string; decidedAt?: string; by?: string };
+  };
+  refund?: {
+    status: 'approved' | 'denied';
+    amount?: number;
+    method?: string;
+    note?: string;
+    decidedAt: string;
+    by?: string;
+  };
+  returnRef?: {
+    status: 'approved' | 'denied';
+    note?: string;
+    decidedAt: string;
+    by?: string;
+  };
+  refundedAt?: string;
+  returnedAt?: string;
 }
 
 export interface User {
