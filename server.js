@@ -50,3 +50,24 @@ if (process.env.NODE_ENV !== 'production') {
     console.log(`Admin backend running on port ${PORT}`);
   });
 }
+
+// SSE: Real-time orders stream
+app.get('/api/orders/stream/public', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+
+  // Send initial connection message
+  res.write('data: {"event":"connected","message":"SSE stream established"}\n\n');
+
+  // Keep connection alive
+  const interval = setInterval(() => {
+    res.write('data: {"event":"ping"}\n\n');
+  }, 30000);
+
+  req.on('close', () => {
+    clearInterval(interval);
+    res.end();
+  });
+});
