@@ -3,7 +3,10 @@
   "builds": [
     {
       "src": "api/index.ts",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": "server/seeds/**"
+      }
     },
     {
       "src": "package.json",
@@ -19,15 +22,5 @@
       "src": "/(.*)",
       "dest": "/dist/$1"
     }
-  ],
-  "env": {
-    "DATABASE_URL": "libsql://c-hub-aegix2025.aws-ap-northeast-1.turso.io",
-    "TURSO_AUTH_TOKEN": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3ODg5MjQ5MTYsImlkIjoiMDFhMDg0MzktYmIwMS03NDM1LTg5YzItOTg3ZDQyMTNlYWNhIiwia2lkIjoiRDNxdkJCOVFKeFNKUXo1VU15eVB0ZGUxbWtjNkJvbVJKYVYzT05hRkdkSSIsInJpZCI6ImQyMTc3ZTMwLTdkNDUtNDA4Ny1iNjRlLTM5YjhjYmRkODgxNCJ9.BJgL8O9daXw5APZ1nRECIj4uwglaqPU1fDQTBtHaoh29BNncwcp8AMiDRw7lN_aqoV558dtQeaqgLsKW6ptXAA",
-    "JWT_SECRET": "store-super-secret-key-2026-xyz-123",
-    "PORT": "3006",
-    "ADMIN_EMAIL": "admin@chubph.com",
-    "ADMIN_PASSWORD": "ChangeMe1234!",
-    "ADMIN_AUTO_LOGIN": "true",
-    "NODE_ENV": "production"
-  }
+  ]
 }
