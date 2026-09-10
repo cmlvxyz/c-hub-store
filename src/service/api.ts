@@ -344,14 +344,16 @@ export const validateVoucher = async (code: string, subtotal: number): Promise<V
   if (!clean) return { valid: false, error: 'Enter a voucher code.' };
   try {
     const response = await fetch(`${API_BASE_URL}/vouchers/${encodeURIComponent(clean)}?subtotal=${Math.max(0, Math.round(subtotal))}`);
+    let payload: any = null;
+    try { payload = await response.json(); } catch { /* ignore */ }
     if (!response.ok) {
-      return { valid: false, error: `Could not check voucher (server error ${response.status}). Please try again.` };
+      const serverMsg = payload?.error || `Could not check voucher (server error ${response.status}). Please try again.`;
+      return { valid: false, error: serverMsg };
     }
-    try {
-      return await response.json();
-    } catch {
+    if (!payload || typeof payload.valid !== 'boolean') {
       return { valid: false, error: 'Invalid voucher response from server. Please try again.' };
     }
+    return payload as VoucherValidation;
   } catch {
     return { valid: false, error: 'Cannot reach the order server. Make sure the backend is running and try again.' };
   }
