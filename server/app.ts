@@ -1620,7 +1620,30 @@ app.get('/api/orders/stream/public', (req, res) => {
   const newClient = { id: clientId, res };
   sseClients.push(newClient);
   res.write(`event: connected\ndata: ${JSON.stringify({ status: 'connected', clientId })}\n\n`);
-  const interval = setInterval(() => { try { res.write(`: ping\n\n`); } catch { /* noop */ } }, 15000);
+
+  // Shared-DB watcher: the Admin app writes order status changes straight to
+  // the shared Turso DB, bypassing this server. Re-read the DB periodically and
+  // broadcast `order-updated` for any row whose status/updatedAt changed so the
+  // Store's progress stepper stays live. On connect a full snapshot is emitted
+  // (lastSeen starts empty) so a page reload syncs immediately.
+  const lastSeen: Record<string, string> = {};
+  const refresh = async () => {
+    try {
+      const orders = await getNormalizedOrders();
+      orders.forEach((order) => {
+        const key = `${order.status}|${order.updatedAt}`;
+        if (lastSeen[order.orderId] !== key) {
+          lastSeen[order.orderId] = key;
+          broadcastSSE('order-updated', order);
+        }
+      });
+    } catch { /* noop */ }
+  };
+  void refresh();
+
+  const interval = setInterval(() => {
+    try { void refresh(); res.write(`: ping\n\n`); } catch { /* noop */ }
+  }, 15000);
   req.on('close', () => {
     clearInterval(interval);
     const idx = sseClients.findIndex((c) => c.id === clientId);

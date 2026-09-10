@@ -344,6 +344,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return;
     }
 
+    // Offline/local sessions (nickname or local-password login) have no JWT,
+    // so the server would reject the sync with 401. Orders are already saved
+    // server-side via POST /api/orders — only sync when we have a real token.
+    if (!getAuthToken()) {
+      console.log('⏭️ Skipping sync: no auth token (orders are stored locally)');
+      return;
+    }
+
     if (orders.length === 0) {
       console.log('⏭️ No orders to sync');
       return;
