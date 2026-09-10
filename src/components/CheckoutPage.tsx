@@ -36,7 +36,7 @@ const checkCatalogAvailability = (item: CartItem): { found: boolean; sizeOk: boo
 };
 
 export const CheckoutPage: React.FC = () => {
-  const { cart, createOrder, setPage, showToast, customerInfo, saveCustomerInfo, checkoutItems, getStock } = useStore();
+  const { cart, createOrder, setPage, showToast, customerInfo, saveCustomerInfo, checkoutItems } = useStore();
 
   // Items na bibilhin: ang napili sa Cart (partial checkout), o ang buong cart.
   const items = checkoutItems.length > 0 ? checkoutItems : cart;
@@ -151,13 +151,6 @@ export const CheckoutPage: React.FC = () => {
       }
       if (!availability.sizeOk) {
         return `The selected size (${item.size || 'Standard'}) for "${item.name}" is no longer available.`;
-      }
-      const stk = getStock(item.id);
-      if (stk <= 0) {
-        return `"${item.name}" is currently out of stock. Please remove it from your cart.`;
-      }
-      if (item.qty > stk) {
-        return `Only ${stk} unit${stk === 1 ? '' : 's'} of "${item.name}" is available. Please reduce the quantity.`;
       }
     }
 

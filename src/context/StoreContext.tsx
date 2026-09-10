@@ -901,22 +901,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return;
     }
 
-    // LIVE STOCK check — huwag hayaan lumampas sa available.
-    const available = getStock(item.id);
-    if (available <= 0) {
-      showToast('This item is currently out of stock.', 'warning');
-      return;
-    }
-
     setCart(prev => {
       const existingIdx = prev.findIndex(
         cartItem => cartItem.id === item.id && cartItem.size === item.size
       );
       if (existingIdx > -1) {
         const newQty = prev[existingIdx].qty + qty;
-        if (newQty > available) {
-          return prev;
-        }
         const copy = [...prev];
         copy[existingIdx].qty = newQty;
         return copy;
@@ -930,13 +920,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const updateCartQty = (id: string, size: string | undefined, delta: number) => {
-    const available = getStock(id);
-    const current = cart.find(c => c.id === id && c.size === size);
-    const targetQty = (current?.qty || 0) + delta;
-    if (delta > 0 && targetQty > available && available > 0) {
-      showToast(`Only ${available} unit${available === 1 ? '' : 's'} available.`, 'warning');
-      return;
-    }
     setCart(prev => {
       return prev
         .map(item => {

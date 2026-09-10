@@ -10,7 +10,6 @@ import {
   Facebook, Linkedin, Search, ArrowDownWideNarrow
 } from 'lucide-react';
 import { GenderType, PageType, SortOption } from '../types';
-import { ProductReviewsSection } from './ProductReviewsSection';
 
 /* ─── Hex color helpers (mobile background) ─── */
 const hexToRgb = (hex: string) => {
@@ -131,7 +130,7 @@ const MobileProductVisual: React.FC<{ product: FlatProduct }> = ({ product }) =>
    MOBILE LAYOUT (md:hidden)
    ============================================================ */
 const MobileShowcase: React.FC<{ categoryKey: string }> = ({ categoryKey }) => {
-  const { gender, setGender, subCategory, setSubCategory, setPage, addToCart, user, showToast, searchQuery, setSearchQuery, sortOption, setSortOption, setShopBgColor, currentProductIndex, setCurrentProductIndex, getStock } = useStore();
+  const { gender, setGender, subCategory, setSubCategory, setPage, addToCart, user, showToast, searchQuery, setSearchQuery, sortOption, setSortOption, setShopBgColor, currentProductIndex, setCurrentProductIndex } = useStore();
   const genderOptions: GenderType[] = ['men', 'women', 'boys', 'girls'];
 
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
@@ -658,7 +657,7 @@ const DesktopShowcase: React.FC<{ categoryKey: string }> = ({ categoryKey }) => 
   const {
     page, gender, subCategory, currentProductIndex,
     setPage, setGender, setSubCategory, setCurrentProductIndex,
-    addToCart, user, isDarkTheme, showToast, getStock,
+    addToCart, user, isDarkTheme, showToast,
     isInWishlist, addToWishlist, removeFromWishlist,
     searchQuery, setSearchQuery, sortOption, setSortOption
   } = useStore();
@@ -768,11 +767,7 @@ const DesktopShowcase: React.FC<{ categoryKey: string }> = ({ categoryKey }) => 
   const textColorClass = isDarkTheme ? 'text-white' : 'text-stone-900';
   const subTextColorClass = isDarkTheme ? 'text-white/70' : 'text-stone-700';
 
-  // LIVE STOCK para sa napiling product + size
   const currentProductId = activeProduct ? `${categoryKey}-${gender}-${currentSubCategory}-${activeProduct.colorName}-${selectedSize}` : '';
-  const currentStock = currentProductId ? getStock(currentProductId) : 0;
-  const isOutOfStock = currentStock <= 0;
-  const isLowStock = !isOutOfStock && currentStock <= 10;
 
   return (
     <div className="w-full relative transition-colors duration-700 py-3 sm:py-6 px-4 sm:px-8">
@@ -1099,19 +1094,6 @@ const DesktopShowcase: React.FC<{ categoryKey: string }> = ({ categoryKey }) => 
 
           {user.isLoggedIn && (
             <div className="flex flex-col items-end gap-1.5">
-              {isOutOfStock ? (
-                <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-100 text-red-600">
-                  Out of Stock
-                </span>
-              ) : isLowStock ? (
-                <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-700">
-                  Low Stock · {currentStock} left
-                </span>
-              ) : (
-                <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700">
-                  In Stock · {currentStock} left
-                </span>
-              )}
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
@@ -1146,8 +1128,8 @@ const DesktopShowcase: React.FC<{ categoryKey: string }> = ({ categoryKey }) => 
                 >
                   <Heart className={`w-4 h-4 ${isInWishlist(currentProductId) ? 'fill-current' : ''}`} />
                 </button>
-                <button id="addToCartFloatingBtn" onClick={handleAddToCart} disabled={isOutOfStock}
-                  className={`px-4 py-2 rounded-full font-bold text-xs flex items-center gap-1.5 transition-all duration-300 shadow-lg cursor-pointer disabled:opacity-50 disabled:pointer-events-none ${
+                <button id="addToCartFloatingBtn" onClick={handleAddToCart}
+                  className={`px-4 py-2 rounded-full font-bold text-xs flex items-center gap-1.5 transition-all duration-300 shadow-lg cursor-pointer ${
                     addedAnimation ? 'bg-emerald-600 text-white scale-105'
                       : isDarkTheme ? 'bg-white text-stone-900 hover:bg-stone-100'
                       : 'bg-indigo-500 text-white hover:bg-stone-800'
@@ -1155,15 +1137,13 @@ const DesktopShowcase: React.FC<{ categoryKey: string }> = ({ categoryKey }) => 
                   {addedAnimation ? (
                     <><Check className="w-3.5 h-3.5" /><span>Added</span></>
                   ) : (
-                    <><ShoppingBag className="w-3.5 h-3.5" /><span>{isOutOfStock ? 'Out of Stock' : 'Cart'}</span></>
+                    <><ShoppingBag className="w-3.5 h-3.5" /><span>Cart</span></>
                   )}
                 </button>
               </div>
             </div>
           )}
         </div>
-
-        {currentProductId && <ProductReviewsSection productId={currentProductId} />}
 
       </div>
     </div>

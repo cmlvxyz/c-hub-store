@@ -7,7 +7,6 @@ import {
   Trash2,
   PackageX,
   ShoppingCart,
-  Minus,
 } from 'lucide-react';
 import { WishlistItem } from '../types';
 
@@ -16,9 +15,8 @@ import { WishlistItem } from '../types';
  *
  * - Per-user (hindi nakikita ang sa iba); local snapshot + backend sync kapag
  *   may totoong account token.
- * - Bawat card: image, name, price, stock status, Add to Cart, Remove.
- * - Kapag out of stock / inalis na ang product -> malinaw na state at bawal
- *   ang checkout galing sa unavailable na item.
+ * - Bawat card: image, name, price, Add to Cart, Remove.
+ * - Kapag inalis na ang product -> malinaw na state at bawal ang checkout.
  */
 export const WishlistPage: React.FC = () => {
   const {
@@ -28,7 +26,6 @@ export const WishlistPage: React.FC = () => {
     removeFromWishlist,
     refreshWishlist,
     addToCart,
-    getStock,
     showToast,
   } = useStore();
 
@@ -74,13 +71,6 @@ export const WishlistPage: React.FC = () => {
     const product = entry.product;
     if (!product) return;
 
-    // Kailangan ng live stock para hindi ma-checkout ang unavailable item.
-    const stock = Number.isFinite(getStock(entry.productId)) ? getStock(entry.productId) : Number(product.stock ?? 0);
-    if (stock <= 0) {
-      showToast('This item is out of stock and cannot be added to cart.', 'warning');
-      return;
-    }
-
     // Kunin ang size: galing sa productId (ang huling segment) o unang available.
     const tail = entry.productId;
     const parts = String(tail).split('-');
@@ -113,13 +103,6 @@ export const WishlistPage: React.FC = () => {
     const product = entry.product;
     const unavailable = !product;
 
-    const stock =
-      product && Number.isFinite(getStock(entry.productId))
-        ? getStock(entry.productId)
-        : Number(product?.stock ?? 0);
-    const stockStatus = product?.stockStatus || (stock <= 0 ? 'Out of Stock' : 'In Stock');
-    const isOutOfStock = stock <= 0;
-
     return (
       <div
         key={entry.productId}
@@ -144,13 +127,6 @@ export const WishlistPage: React.FC = () => {
             <PackageX className="w-8 h-8 text-stone-300 dark:text-stone-600" />
           ) : (
             <ShoppingBag className="w-8 h-8 text-stone-300 dark:text-stone-600" />
-          )}
-          {isOutOfStock && !unavailable && (
-            <span className="absolute inset-0 flex items-center justify-center bg-black/50">
-              <span className="px-2 py-1 rounded-full bg-red-600 text-white text-[10px] font-black uppercase tracking-wider">
-                Out of Stock
-              </span>
-            </span>
           )}
         </div>
 
@@ -187,36 +163,15 @@ export const WishlistPage: React.FC = () => {
             ) : null}
           </div>
 
-          {/* Stock status */}
-          <div className="mt-1.5">
-            {unavailable ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 text-[10px] font-black uppercase tracking-wider">
-                <Minus className="w-3 h-3" /> No longer available
-              </span>
-            ) : stockStatus === 'In Stock' ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-wider">
-                In Stock{stock > 0 ? ` · ${stock} left` : ''}
-              </span>
-            ) : stockStatus === 'Low Stock' ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-wider">
-                Low Stock · {stock} left
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-100 text-red-600 text-[10px] font-black uppercase tracking-wider">
-                Out of Stock
-              </span>
-            )}
-          </div>
-
           {/* Actions */}
           <div className="mt-auto pt-3">
             <button
               onClick={() => handleAddToCart(entry)}
-              disabled={isOutOfStock || unavailable}
+              disabled={unavailable}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-stone-200 disabled:text-stone-400 dark:disabled:bg-stone-800 dark:disabled:text-stone-500 text-white text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-md shadow-indigo-600/25 disabled:shadow-none"
             >
               <ShoppingCart className="w-3.5 h-3.5" />
-              {unavailable ? 'Unavailable' : isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+              {unavailable ? 'Unavailable' : 'Add to Cart'}
             </button>
           </div>
         </div>
