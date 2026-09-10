@@ -7,6 +7,10 @@ import { initiatePayment, isOnlinePayment } from '../service/payments';
 
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours bago mag-expire ang session
 
+export type OrderCreateResult =
+  | { success: true; order: Order }
+  | { success: false; error: string };
+
 interface StoreContextType {
   page: PageType;
   gender: GenderType;
@@ -62,7 +66,7 @@ interface StoreContextType {
   addToWishlist: (product: { id: string; name?: string; price?: number; originalPrice?: number; image?: string; bgColor?: string; textColor?: string; category?: string; subCategory?: string; gender?: string; sizes?: string[] }) => void;
   removeFromWishlist: (id: string) => void;
   refreshWishlist: () => Promise<void>;
-  createOrder: (customer: CustomerDetails, discountCode: string, paymentMethod: string, items?: CartItem[], shippingMethod?: string, shippingFee?: number, eta?: string) => Promise<Order | null>;
+  createOrder: (customer: CustomerDetails, discountCode: string, paymentMethod: string, items?: CartItem[], shippingMethod?: string, shippingFee?: number, eta?: string) => Promise<OrderCreateResult>;
   checkoutItems: CartItem[];
   setCheckoutItems: (items: CartItem[]) => void;
   login: (username: string) => void;
@@ -965,19 +969,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     shippingMethod?: string,
     shippingFee?: number,
     eta?: string
-  ): Promise<Order | null> => {
+  ): Promise<OrderCreateResult> => {
     console.log('🛒 Creating order...');
 
     if (!user.isLoggedIn) {
       showToast('Please login first', 'warning');
-      return null;
+      return { success: false, error: 'Please login first.' };
     }
 
     // Items na bibilhin = explicit selection (partial checkout) o ang buong cart.
     const orderItemsRaw = items && items.length > 0 ? items : cart;
     if (orderItemsRaw.length === 0) {
       showToast('Cart is empty!', 'warning');
-      return null;
+      return { success: false, error: 'Your cart is empty. Add items before checking out.' };
     }
 
     const subtotal = orderItemsRaw.reduce((sum, item) => sum + item.price * item.qty, 0);
@@ -1042,15 +1046,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ Server error response:', errorText);
-        // Insufficient stock (409) — ipakita ang eksaktong kulang na items at huwag gumawa ng order.
+        // Ipakita ang EXACT na dahilan (hindi generic toast):
+        // - 409: kulang ang stock o wala sa catalog ang item
+        // - 4xx/5xx: anumang detalye mula sa backend
         let parsed: any = null;
         try { parsed = JSON.parse(errorText); } catch { /* not json */ }
+        const serverMessage = parsed?.error || `Server error ${response.status}: ${errorText.slice(0, 200)}`;
         if (response.status === 409 && parsed?.insufficientStock?.length) {
           const names = parsed.insufficientStock.map((s: any) => s.name || s.id).join(', ');
-          showToast(`Insufficient stock for: ${names}`, 'warning');
-          return null;
+          const msg = `Insufficient stock for: ${names}`;
+          showToast(msg, 'warning');
+          return { success: false, error: msg };
         }
-        throw new Error(`Server error: ${response.status} - ${errorText}`);
+        showToast(serverMessage, 'warning');
+        return { success: false, error: serverMessage };
       }
       
       const data = await response.json() as { success: boolean; order: Order };
@@ -1106,14 +1115,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       setTimeout(() => syncOrdersToServer(), 500);
 
-      showToast(`Order ${savedOrder.orderId} placed successfully!`, 'success');
+showToast(`Order ${savedOrder.orderId} placed successfully!`, 'success');
       addNotification(`Order ${savedOrder.orderId} placed successfully`, 'success', savedOrder.orderId);
-      return finalOrder;
-      
+      return { success: true, order: finalOrder };
+
     } catch (error) {
       console.error('❌ Failed to save order:', error);
-      showToast('Failed to place order. Please try again.', 'warning');
-      return null;
+      const detail = error instanceof Error ? error.message : String(error);
+      const msg = /fetch|network|ECONN|connection/i.test(detail)
+        ? 'Cannot reach the order server. Make sure the backend is running (c-hub start.bat, port 3006) and try again.'
+        : detail || 'Failed to place order. Please try again.';
+      showToast(msg, 'warning');
+      return { success: false, error: msg };
     }
   };
 

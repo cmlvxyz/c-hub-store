@@ -61,6 +61,7 @@ export const CheckoutPage: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const submittingRef = useRef(false);
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
+  const [orderError, setOrderError] = useState('');
 
   const savedAddress = customerInfo?.address
     ? {
@@ -176,18 +177,20 @@ export const CheckoutPage: React.FC = () => {
     // Prevent duplicate submission mula sa repeated clicks habang nagse-save.
     if (submittingRef.current || isProcessing) return;
 
-    const validationMessage = validateCheckout();
-    if (validationMessage) {
-      showToast(validationMessage, 'warning');
-      return;
-    }
-
-    submittingRef.current = true;
-    setIsProcessing(true);
-
     try {
+      const validationMessage = validateCheckout();
+      if (validationMessage) {
+        setOrderError(validationMessage);
+        showToast(validationMessage, 'warning');
+        return;
+      }
+
+      submittingRef.current = true;
+      setIsProcessing(true);
+      setOrderError('');
+
       // ✅ AWAIT ang createOrder (ipapasa ang napiling items + shipping)
-      const order = await createOrder(
+      const result = await createOrder(
         customer,
         appliedCode,
         paymentMethod,
@@ -197,16 +200,22 @@ export const CheckoutPage: React.FC = () => {
         selectedEta
       );
 
-      if (order) {
+      if ('order' in result) {
+        const order = result.order;
+        setOrderError('');
         setCompletedOrder(order);
         showToast(`Order ${order.orderId} placed successfully!`, 'success');
         // ✅ Purhased items lang ang inaalis sa cart (partial checkout)
       } else {
-        showToast('Failed to place order. Please try again.', 'warning');
+        const reason = result.error || 'Failed to place order. Please try again.';
+        setOrderError(reason);
+        showToast(reason, 'warning');
       }
     } catch (error) {
       console.error('Order placement error:', error);
-      showToast('An error occurred. Please try again.', 'warning');
+      const msg = 'An unexpected error occurred while placing your order.';
+      setOrderError(msg);
+      showToast(msg, 'warning');
     } finally {
       submittingRef.current = false;
       setIsProcessing(false);
@@ -638,6 +647,18 @@ export const CheckoutPage: React.FC = () => {
               </span>
             </div>
           </div>
+
+          {orderError && (
+            <div
+              role="alert"
+              className="p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-800 text-xs text-red-700 dark:text-red-300 flex items-start gap-2 animate-fadeIn"
+            >
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>
+                <b>Order not placed:</b> {orderError}
+              </span>
+            </div>
+          )}
 
           <button
             type="submit"
