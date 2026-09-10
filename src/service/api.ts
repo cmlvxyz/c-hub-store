@@ -342,12 +342,19 @@ export interface VoucherValidation {
 export const validateVoucher = async (code: string, subtotal: number): Promise<VoucherValidation> => {
   const clean = String(code || '').trim().toUpperCase();
   if (!clean) return { valid: false, error: 'Enter a voucher code.' };
-  const response = await fetch(`${API_BASE_URL}/vouchers/${encodeURIComponent(clean)}?subtotal=${Math.max(0, Math.round(subtotal))}`);
-  let data: VoucherValidation = { valid: false };
   try {
-    data = await response.json();
-  } catch { /* ignore */ }
-  return data;
+    const response = await fetch(`${API_BASE_URL}/vouchers/${encodeURIComponent(clean)}?subtotal=${Math.max(0, Math.round(subtotal))}`);
+    if (!response.ok) {
+      return { valid: false, error: `Could not check voucher (server error ${response.status}). Please try again.` };
+    }
+    try {
+      return await response.json();
+    } catch {
+      return { valid: false, error: 'Invalid voucher response from server. Please try again.' };
+    }
+  } catch {
+    return { valid: false, error: 'Cannot reach the order server. Make sure the backend is running and try again.' };
+  }
 };
 
 // GET - Kunin ang mga notifications ng user (token required).
